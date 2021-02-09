@@ -231,16 +231,20 @@ namespace SlugBase
             {
                 // In arena, default to playing as survivor
                 // If a SlugBase character is in dev mode, use that slot instead
-                int arenaChar = 0;
-                foreach(CustomPlayer ply in customPlayers)
+                if (ArenaAdditions.arenaCharacter.TryGet(manager.arenaSetup, out var ply))
                 {
-                    if(ply.DevMode)
+                    switch (ply.type)
                     {
-                        arenaChar = ply.slugcatIndex;
-                        break;
+                        case ArenaAdditions.PlayerSelector.PlayerDescriptor.Type.SlugBase:
+                            StartGame(ply.player);
+                            break;
+                        case ArenaAdditions.PlayerSelector.PlayerDescriptor.Type.Vanilla:
+                        default:
+                            StartGame(0);
+                            break;
                     }
                 }
-                StartGame(arenaChar);
+                else StartGame(0);
             }
             orig(self, manager);
         }
@@ -263,6 +267,13 @@ namespace SlugBase
                 CurrentPlayer = ply;
                 ply.Enable();
             }
+        }
+
+        internal static void StartGame(CustomPlayer customPlayer)
+        {
+            Debug.Log($"Started game as \"{customPlayer.Name}\"");
+            CurrentPlayer = customPlayer;
+            customPlayer.Enable();
         }
 
         internal static void EndGame()

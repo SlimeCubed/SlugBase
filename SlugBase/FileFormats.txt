@@ -57,6 +57,7 @@ The "crisp" tag is ignored for images with a "depth" value of less than zero.
 The "shader" value is first checked against the Menu.MenuDepthIllustration.MenuShader enum. If the image is flat, or no MenuShader exists with that name, then it is checked against all shaders.
 The "alphakeys" value is used only for slideshows. It is made up of pairs of times and alpha values. The image will linearly interpolate between keyframes.
 
+
  -- Slideshow Format --
 
 Each custom slideshow has its own file in "[Resources]\Slideshows".

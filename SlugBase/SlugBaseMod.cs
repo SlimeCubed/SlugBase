@@ -37,7 +37,6 @@ namespace SlugBase
              * TODO:
              * 
              * Only apply hooks once a player is registered to avoid side-effects (?)
-             * Arena mode (portraits, allowing custom players to be used)
              * Look into Scavenger.WantToLethallyAttack
              * 
              */
@@ -53,13 +52,14 @@ namespace SlugBase
 
         public override void OnLoad()
         {
+            ArenaAdditions.ApplyHooks();
             CustomSceneManager.ApplyHooks();
-            WorldFixes.ApplyHooks();
             PlayerManager.ApplyHooks();
             SaveManager.ApplyHooks();
             SceneEditor.ApplyHooks();
             SelectMenu.ApplyHooks();
             ShelterScreens.ApplyHooks();
+            WorldFixes.ApplyHooks();
         }
     }
 }
