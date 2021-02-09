@@ -11,7 +11,7 @@ using System.Text;
 
 namespace SlugBase
 {
-    using static CustomScenes;
+    using static CustomSceneManager;
 
     /// <summary>
     /// The core of adding a custom slugcat to be added with <see cref="PlayerManager.RegisterPlayer(CustomPlayer)"/>.
@@ -35,6 +35,11 @@ namespace SlugBase
         /// The value should be 0 (survivor), 1 (monk) or 2 (hunter).
         /// Values outside of this range are allowed, but the vanilla game's world files are not set up to use them correctly.
         /// </param>
+        /// <remarks>
+        /// The name of this slugcat must be unique; other mods that add a slugcat of this same name will throw an exception
+        /// when registering their character. If your name is likely to cause conflicts (such as any of the vanilla achievement
+        /// names), then consider prefixing your player's name with some other text, like the author's name.
+        /// </remarks>
         /// <exception cref="ArgumentNullException">Thrown when input name is null.</exception>
         /// <exception cref="ArgumentException">Thrown when input name is empty or contains illegal characters.</exception>
         public CustomPlayer(string name, PlayerFormatVersion version, int useSpawns = 0)
@@ -72,6 +77,15 @@ namespace SlugBase
         public virtual string StartRoom => "SU_C04";
 
         /// <summary>
+        /// Called once as a game starts from the select screen.
+        /// </summary>
+        /// <remarks>
+        /// This is called as soon possible, the moment that user's character choice is locked in.
+        /// Effects that must apply before the <see cref="RainWorldGame"/> instance is created may be done here.
+        /// </remarks>
+        protected internal virtual void Prepare() { }
+
+        /// <summary>
         /// Called once when a game is started as this character.
         /// </summary>
         protected internal abstract void Enable();
@@ -96,6 +110,7 @@ namespace SlugBase
         internal void GetStatsInternal(SlugcatStats stats)
         {
             stats.throwingSkill = stats.malnourished ? 0 : 1;
+            stats.name = (SlugcatStats.Name)slugcatIndex;
             GetStats(stats);
         }
 
@@ -105,11 +120,47 @@ namespace SlugBase
         /// </summary>
         /// <param name="maxFood">The amount of food that this character can hold.</param>
         /// <param name="foodToSleep">The amount of food that this character needs to sleep.</param>
-        protected internal virtual void GetFoodMeter(out int maxFood, out int foodToSleep)
+        public virtual void GetFoodMeter(out int maxFood, out int foodToSleep)
         {
             maxFood = 7;
             foodToSleep = 4;
         }
+
+        /// <summary>
+        /// Checks whether or not this player can eat the meat of a certain creature.
+        /// By default, this returns the same as the vanilla game, which is true for dead centipedes and false for all other creatures.
+        /// </summary>
+        /// <param name="player">The player that is trying to eat.</param>
+        /// <param name="creature">The creature that the player is tring to eat.</param>
+        /// <returns>True if the creature can be eaten, false otherwise.</returns>
+        public virtual bool CanEatMeat(Player player, Creature creature) {
+            return player.CanEatMeat(creature);
+        }
+
+        /// <summary>
+        /// True if this character receives a quarter pips for non-meat foods.
+        /// Defaults to false.
+        /// </summary>
+        public virtual bool QuarterFood => false;
+
+        /// <summary>
+        /// True if karma gates unlock permanently for this character, such as when playing as Monk.
+        /// Defaults to false.
+        /// </summary>
+        public virtual bool GatesPermanentlyUnlock => false;
+
+        /// <summary>
+        /// Gets how many minutes this cycle should last.
+        /// Defaults to null.
+        /// </summary>
+        /// <returns>The number of minutes the cycle should last, or null to use the default.</returns>
+        public virtual float? GetCycleLength() => null;
+
+        /// <summary>
+        /// True if this character can skip the temple guardians with a flashbang.
+        /// Defaults to true.
+        /// </summary>
+        public virtual bool CanSkipTempleGuards => true;
 
         /////////////
         // DISPLAY //
@@ -123,7 +174,7 @@ namespace SlugBase
         /// <summary>
         /// Gets the default directory that contains resources for this slugcat.
         /// </summary>
-        protected string DefaultResourcePath => Path.Combine(PlayerManager.ResourceDirectory, Name);
+        protected internal string DefaultResourcePath => Path.Combine(PlayerManager.ResourceDirectory, Name);
 
         /// <summary>
         /// The name to display to the user, such as on the player select screen.
@@ -173,6 +224,7 @@ namespace SlugBase
         /// <remarks>
         /// This is intended to be overridden to load from different locations, such as from embedded resources via <see cref="Assembly.GetManifestResourceStream(string)"/>.
         /// This should return null if the resource does not exist, or there was a problem accessing the resource.
+        /// Make sure to dispose of it!
         /// </remarks>
         /// <param name="path">The relative location of the resource.</param>
         /// <returns>A stream of data for the specified resource, or null if the resource does not exist.</returns>
@@ -180,11 +232,10 @@ namespace SlugBase
         {
             try
             {
-                Debug.Log($"Loading {Name} resource from \"{string.Join("/", path)}\"");
+                //Debug.Log($"Loading {Name} resource from \"{string.Join("/", path)}\"");
                 return File.OpenRead(Path.Combine(DefaultResourcePath, string.Join(Path.DirectorySeparatorChar.ToString(), path)));
-            } catch(Exception e)
+            } catch
             {
-                Debug.Log($"Failed: {e}");
                 return null;
             }
         }
@@ -196,45 +247,60 @@ namespace SlugBase
         /// <returns>A string if the resource was found, or null if the resource does not exist or was not valid UTF-8.</returns>
         public string GetStringResource(params string[] path)
         {
-            Stream stream = GetResource(path);
-            if (stream == null) return null;
-            try
+            using (Stream stream = GetResource(path))
             {
-                StreamReader sr = new StreamReader(stream, Encoding.UTF8);
-                return sr.ReadToEnd();
-            } catch(Exception)
-            {
-                return null;
+                if (stream == null) return null;
+                try
+                {
+                        StreamReader sr = new StreamReader(stream, Encoding.UTF8);
+                        return sr.ReadToEnd();
+                } catch(Exception)
+                {
+                    return null;
+                }
             }
         }
 
         /// <summary>
-        /// Retrieves a list of images to display for the given scene.
+        /// Retrieves information about a custom scene.
         /// </summary>
         /// <remarks>
         /// This is intended to be overridden if you need more control over which images are loaded in a scene.
         /// For example, this may be changed to enable or disable background elements based on save state.
+        /// <para>The returned images should be ordered from lowest to highest depth.</para>
         /// </remarks>
         /// <param name="sceneName">The name of the scene to build.</param>
-        public virtual List<CustomSceneImage> BuildScene(string sceneName)
+        public virtual CustomScene BuildScene(string sceneName)
         {
-            List<CustomSceneImage> images = new List<CustomSceneImage>();
-            StreamReader sr = new StreamReader(GetResource("Scenes", sceneName, "settings.txt"));
-            string line;
-            while((line = sr.ReadLine()) != null)
+            using (Stream resource = GetResource("Scenes", sceneName, "scene.json"))
             {
-                try
+                using (StreamReader sr = new StreamReader(resource))
                 {
-                    images.Add(CustomSceneImage.Parse(line));
-                } catch(Exception e)
-                {
-                    Debug.LogException(e);
-                    break;
+                    return new CustomScene(this, sceneName, sr.ReadToEnd());
                 }
             }
-            return images;
         }
 
+        /// <summary>
+        /// Retrieves information about a custom slideshow.
+        /// </summary>
+        /// <remarks>
+        /// This is intended to be overridden if you need to change which images are loaded for a slideshow
+        /// without changing the JSON file.
+        /// </remarks>
+        /// <param name="slideshowName">The name of the slideshow to build.</param>
+        public virtual CustomSlideshow BuildSlideshow(string slideshowName)
+        {
+            using (Stream resource = GetResource("Slideshows", $"{slideshowName}.json"))
+            {
+                using (StreamReader sr = new StreamReader(resource))
+                {
+                    return new CustomSlideshow(this, slideshowName, sr.ReadToEnd());
+                }
+            }
+        }
+
+        private readonly Dictionary<string, bool> hasSceneCache = new Dictionary<string, bool>();
         /// <summary>
         /// Checks whether or not this player defines a custom scene.
         /// </summary>
@@ -242,10 +308,52 @@ namespace SlugBase
         /// <returns>True if the scene exists, false if it does not.</returns>
         public bool HasScene(string sceneName)
         {
-            using (Stream res = GetResource("Scenes", sceneName, "settings.txt"))
-                return res != null;
+            if (!DevMode && hasSceneCache.TryGetValue(sceneName, out bool hasScene)) return hasScene;
+            using (Stream res = GetResource("Scenes", sceneName, "scene.json"))
+            {
+                hasScene = res != null;
+                if(!DevMode)
+                    hasSceneCache[sceneName] = hasScene;
+                return hasScene;
+            }
         }
 
+        private readonly Dictionary<string, bool> hasSlideshowCache = new Dictionary<string, bool>();
+        /// <summary>
+        /// Checks whether or not this player defines a custom slideshow.
+        /// </summary>
+        /// <param name="slideshowName">The name of the slideshow to check for.</param>
+        /// <returns>True if the slideshow exists, false if it does not.</returns>
+        public bool HasSlideshow(string slideshowName)
+        {
+            if (!DevMode && hasSlideshowCache.TryGetValue(slideshowName, out bool hasSlideshow)) return hasSlideshow;
+            using (Stream res = GetResource("Slideshows", $"{slideshowName}.json"))
+            {
+                hasSlideshow = res != null;
+                if (!DevMode)
+                    hasSlideshowCache[slideshowName] = hasSlideshow;
+                return hasSlideshow;
+            }
+        }
+
+        /// <summary>
+        /// Replaces the next <see cref="MenuScene"/> with a scene loaded from this character's resources.
+        /// <see cref="ClearSceneOverride"/> may be used to abort this.
+        /// </summary>
+        /// <param name="sceneName">The name of the scene to load.</param>
+        /// <param name="filter">A delegate that returns true for each image that should be shown in the scene, or null to show all.</param>
+        protected void OverrideNextScene(string sceneName, SceneImageFilter filter)
+        {
+            CustomSceneManager.OverrideNextScene(this, sceneName, filter);
+        }
+
+        /// <summary>
+        /// Aborts a scene override from <see cref="OverrideNextScene(string, SceneImageFilter)"/>.
+        /// </summary>
+        protected void ClearSceneOverride()
+        {
+            CustomSceneManager.ClearSceneOverride();
+        }
 
         /////////////////////////////
         // BACKWARDS COMPATIBILITY //

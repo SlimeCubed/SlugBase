@@ -15,12 +15,13 @@ using System.Runtime.CompilerServices;
 
 namespace SlugBase
 {
-    using static CustomScenes;
+    using static CustomSceneManager;
 
     internal static class SelectMenu
     {
         public static void ApplyHooks()
         {
+            On.Menu.SlugcatSelectMenu.StartGame += SlugcatSelectMenu_StartGame;
             On.Menu.SlugcatSelectMenu.UpdateStartButtonText += SlugcatSelectMenu_UpdateStartButtonText;
             new Hook(
                 typeof(SlugcatSelectMenu.SlugcatPageContinue).GetProperty("saveGameData", BindingFlags.Public | BindingFlags.Instance).GetGetMethod(),
@@ -33,6 +34,18 @@ namespace SlugBase
             On.Menu.SlugcatSelectMenu.SlugcatPage.ctor += SlugcatPage_ctor;
             On.Menu.SlugcatSelectMenu.SlugcatPageNewGame.ctor += SlugcatPageNewGame_ctor;
             On.HUD.KarmaMeter.Draw += KarmaMeter_Draw;
+        }
+
+        // Call Prepare on the character that is about to start
+        // This should give the most time possible to respond before the game starts
+        // A mod could change which CRS regions are active, or start loading something
+        // ... in another thread, the join it in Enable
+        private static void SlugcatSelectMenu_StartGame(On.Menu.SlugcatSelectMenu.orig_StartGame orig, SlugcatSelectMenu self, int storyGameCharacter)
+        {
+            CustomPlayer ply = PlayerManager.GetCustomPlayer(storyGameCharacter);
+            if(ply != null)
+                ply.Prepare();
+            orig(self, storyGameCharacter);
         }
 
         // Stop GetSaveGameData from inlining
@@ -129,108 +142,40 @@ namespace SlugBase
             self.slugcatDepth = 1f;
 
             // Load a custom character's select screen from resources
-            bool useDefaultMark = false;
-            Vector2 markPos = new Vector2(self.MidXpos, self.imagePos.y + 150f) + new Vector2(-15f, -2f); // Survivor's mark offset
-            bool useDefaultGlow = false;
-            Vector2 glowPos = new Vector2(self.MidXpos, self.imagePos.y) + new Vector2(-30f, -50f); // Survivor's glow offset
-            float slugcatDepth = 3f;
-            OverrideNextScene(ply, sceneName, img =>
+            CustomScene scene = OverrideNextScene(ply, sceneName, img =>
             {
-                if (img.HasTag("MARK"))
-                {
-                    // If any have the asset name "DEFAULT" and the tag "MARK", then it indicates the position of the default mark
-                    // If none do, then no mark appears
-                    // Any tagged with just "MARK" will show up whenever the player has the mark
-                    if (img.AssetName == "DEFAULT")
-                    {
-                        useDefaultMark = true;
-                        markPos = img.Pos;
-                        slugcatDepth = img.Depth;
-                        return false;
-                    }
-                    else if (!useDefaultMark)
-                    {
-                        // Lazy
-                        markPos.Set(0f, 100000f);
-                    }
-                    return self.HasMark;
-                }
-                if (img.HasTag("GLOW"))
-                {
-                    // Similar logic to the mark
-                    if (img.AssetName == "DEFAULT")
-                    {
-                        useDefaultGlow = true;
-                        glowPos = img.Pos;
-                        slugcatDepth = img.Depth;
-                        return false;
-                    }
-                    else if (!useDefaultGlow)
-                    {
-                        // Lazy
-                        glowPos.Set(0f, 100000f);
-                    }
-                    return self.HasGlow;
-                }
+                if (img.HasTag("MARK") && !self.HasMark) return false;
+                if (img.HasTag("GLOW") && !self.HasGlow) return false;
                 return true;
             });
 
-            self.slugcatImage = new InteractiveMenuScene(self.menu, self, MenuScene.SceneID.Slugcat_White); // This scene will be immediately overwritten
+            // Slugcat depth, used for positioning the glow and mark
+            self.slugcatDepth = scene.GetProperty<float?>("slugcatdepth") ?? 3f;
+
+            // Add mark
+            MarkImage mark = new MarkImage(scene);
+            scene.InsertImage(mark);
+
+            // Add glow
+            GlowImage glow = new GlowImage(scene, self.slugcatDepth + 0.1f);
+            scene.InsertImage(glow);
+
+            try
+            {
+                self.slugcatImage = new InteractiveMenuScene(self.menu, self, MenuScene.SceneID.Slugcat_White); // This scene will be immediately overwritten
+            } finally { ClearSceneOverride(); }
             self.subObjects.Add(self.slugcatImage);
 
             // Find the relative mark and glow positions
-            self.markOffset = markPos - new Vector2(self.MidXpos, self.imagePos.y + 150f);
-            self.glowOffset = glowPos - new Vector2(self.MidXpos, self.imagePos.y);
-            self.slugcatDepth = slugcatDepth;
-
-            // Add mark
-            // If the player has a custom mark image, this will be placed offscreen
-            if (self.HasMark)
-            {
-                self.markSquare = new FSprite("pixel", true);
-                self.markSquare.scale = 14f;
-                self.markSquare.color = Color.Lerp(self.effectColor, Color.white, 0.7f);
-                self.Container.AddChild(self.markSquare);
-                self.markGlow = new FSprite("Futile_White", true);
-                self.markGlow.shader = self.menu.manager.rainWorld.Shaders["FlatLight"];
-                self.markGlow.color = self.effectColor;
-                self.Container.AddChild(self.markGlow);
-            }
-
-            // Insert a special image for the glow into the scene
-            if (self.HasGlow)
-            {
-                if (useDefaultGlow)
-                {
-                    CustomSceneImage img = CustomSceneImage.CreateSpecial("glow", onCreate: page =>
-                    {
-                        if ((page.owner is SlugcatSelectMenu.SlugcatPage sp) && sp.HasGlow)
-                        {
-                            sp.glowSpriteB = new FSprite("Futile_White", true);
-                            sp.glowSpriteB.shader = sp.menu.manager.rainWorld.Shaders["FlatLightNoisy"];
-                            sp.Container.AddChild(sp.glowSpriteB);
-                            sp.glowSpriteA = new FSprite("Futile_White", true);
-                            sp.glowSpriteA.shader = sp.menu.manager.rainWorld.Shaders["FlatLightNoisy"];
-                            sp.Container.AddChild(sp.glowSpriteA);
-                        }
-
-                        // Do not show this as an image
-                        return false;
-                    });
-                    img.depth = slugcatDepth + 0.1f;
-                    InsertImage(img);
-                }
-                else
-                {
-                    self.glowSpriteA = new FSprite("pixel") { alpha = 0f, color = Color.clear };
-                    self.glowSpriteB = new FSprite("pixel") { alpha = 0f, color = Color.clear };
-                }
-            }
+            self.markOffset = mark.Pos - new Vector2(self.MidXpos, self.imagePos.y + 150f);
+            self.glowOffset = glow.Pos - new Vector2(self.MidXpos, self.imagePos.y);
         }
 
         // Add custom slugcat select screens
         private static void SlugcatSelectMenu_ctor(On.Menu.SlugcatSelectMenu.orig_ctor orig, Menu.SlugcatSelectMenu self, ProcessManager manager)
         {
+            int selectedSlugcat = manager.rainWorld.progression.miscProgressionData.currentlySelectedSinglePlayerSlugcat;
+
             orig(self, manager);
 
             List<CustomPlayer> plys = PlayerManager.customPlayers;
@@ -241,11 +186,18 @@ namespace SlugBase
 
             // Find the next available slugcat index, skipping Nightcat
             int firstCustomIndex = 4;
+            
+            // Take color order into account
             for (int i = 0; i < self.slugcatColorOrder.Length; i++)
                 firstCustomIndex = Math.Max(self.slugcatColorOrder[i] + 1, firstCustomIndex);
+            
+            // Take slugcat names into account
+            foreach(SlugcatStats.Name name in Enum.GetValues(typeof(SlugcatStats.Name)))
+                firstCustomIndex = Math.Max((int)name + 1, firstCustomIndex);
+
             int nextCustomIndex = firstCustomIndex;
 
-            // Add custom slugcats to the page order, and assign a default value
+            // Add custom slugcats to the page order and assign empty slots a default value
             Array.Resize(ref self.slugcatColorOrder, origLength + plys.Count);
             for(int i = origLength; i < self.slugcatColorOrder.Length; i++)
                 self.slugcatColorOrder[i] = -1;
@@ -280,7 +232,16 @@ namespace SlugBase
                 {
                     self.slugcatPages[o] = new SlugcatSelectMenu.SlugcatPageNewGame(self, null, o + 1, self.slugcatColorOrder[o]);
                 }
+
+                // Select the correct page
+                if (selectedSlugcat == self.slugcatColorOrder[o])
+                    self.slugcatPageIndex = o;
+
                 self.pages.Add(self.slugcatPages[o]);
+
+                // Make sure the start button reflects the changed slugcat index
+                self.UpdateStartButtonText();
+                self.UpdateSelectedSlugcatInMiscProg();
             }
         }
 
@@ -298,6 +259,7 @@ namespace SlugBase
         }
 
         // Fix position calculation of the karma meter to use timeStacker instead of timer
+        // This results in a smooth animation
         private static void KarmaMeter_Draw(On.HUD.KarmaMeter.orig_Draw orig, KarmaMeter self, float timeStacker)
         {
             orig(self, timeStacker);
@@ -320,6 +282,87 @@ namespace SlugBase
                         self.vectorRingSprite.y = pos.y;
                     }
                 }
+            }
+        }
+
+        private class MarkImage : SceneImage
+        {
+            public MarkImage(CustomScene owner) : base(owner)
+            {
+                Pos = new Vector2(owner.GetProperty<float?>("markx") ?? 683f, owner.GetProperty<float?>("marky") ?? 484f);
+                Depth = 0f;
+            }
+
+            public override string DisplayName => "MARK";
+
+            public override bool ShouldBeSaved => false;
+
+            protected internal override bool OnBuild(MenuScene scene)
+            {
+                if (!(scene.owner is SlugcatSelectMenu.SlugcatPage sp)) return false;
+
+                if (sp.HasMark)
+                {
+                    sp.markSquare = new FSprite("pixel", true);
+                    sp.markSquare.scale = 14f;
+                    sp.markSquare.color = Color.Lerp(sp.effectColor, Color.white, 0.7f);
+                    sp.Container.AddChild(sp.markSquare);
+                    sp.markGlow = new FSprite("Futile_White", true);
+                    sp.markGlow.shader = sp.menu.manager.rainWorld.Shaders["FlatLight"];
+                    sp.markGlow.color = sp.effectColor;
+                    sp.Container.AddChild(sp.markGlow);
+                } else
+                {
+                    sp.markSquare = new FSprite("pixel") { isVisible = false };
+                    sp.markGlow = new FSprite("pixel") { isVisible = false };
+                }
+                return false;
+            }
+
+            public override void OnSave(Dictionary<string, object> scene)
+            {
+                scene["markx"] = Pos.x;
+                scene["marky"] = Pos.y;
+            }
+        }
+
+        private class GlowImage : SceneImage
+        {
+            public GlowImage(CustomScene owner, float depth) : base(owner)
+            {
+                Pos = new Vector2(owner.GetProperty<float?>("glowx") ?? 683f, owner.GetProperty<float?>("glowy") ?? 484f);
+                Depth = depth;
+            }
+
+            public override string DisplayName => "GLOW";
+
+            public override bool ShouldBeSaved => false;
+
+            protected internal override bool OnBuild(MenuScene scene)
+            {
+                if (!(scene.owner is SlugcatSelectMenu.SlugcatPage sp)) return false;
+
+                if (sp.HasMark)
+                {
+                    sp.glowSpriteB = new FSprite("Futile_White");
+                    sp.glowSpriteB.shader = sp.menu.manager.rainWorld.Shaders["FlatLightNoisy"];
+                    sp.Container.AddChild(sp.glowSpriteB);
+                    sp.glowSpriteA = new FSprite("Futile_White");
+                    sp.glowSpriteA.shader = sp.menu.manager.rainWorld.Shaders["FlatLightNoisy"];
+                    sp.Container.AddChild(sp.glowSpriteA);
+                } else
+                {
+                    sp.glowSpriteA = new FSprite("pixel") { isVisible = false };
+                    sp.glowSpriteB = new FSprite("pixel") { isVisible = false };
+                }
+
+                return false;
+            }
+
+            public override void OnSave(Dictionary<string, object> scene)
+            {
+                scene["glowx"] = Pos.x;
+                scene["glowy"] = Pos.y;
             }
         }
     }

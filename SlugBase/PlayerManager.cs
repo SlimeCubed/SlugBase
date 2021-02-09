@@ -85,6 +85,13 @@ namespace SlugBase
 
         internal static void ApplyHooks()
         {
+            On.TempleGuardAI.Update += TempleGuardAI_Update;
+            On.RainCycle.ctor += RainCycle_ctor;
+            On.OverWorld.GateRequestsSwitchInitiation += OverWorld_GateRequestsSwitchInitiation;
+            On.HUD.FoodMeter.Update += FoodMeter_Update;
+            On.Player.AddFood += Player_AddFood;
+            On.Player.ObjectEaten += Player_ObjectEaten;
+            On.Player.CanEatMeat += Player_CanEatMeat;
             On.SlugcatStats.SlugcatFoodMeter += SlugcatStats_SlugcatFoodMeter;
             On.SlugcatStats.ctor += SlugcatStats_ctor;
             On.PlayerGraphics.SlugcatColor += PlayerGraphics_SlugcatColor;
@@ -92,21 +99,121 @@ namespace SlugBase
             On.RainWorldGame.ShutDownProcess += RainWorldGame_ShutDownProcess;
         }
 
+        #region HOOKS
+
+        // Disallow the guardian skip on request
+        private static void TempleGuardAI_Update(On.TempleGuardAI.orig_Update orig, TempleGuardAI self)
+        {
+            if(UsingCustomPlayer && !CurrentPlayer.CanSkipTempleGuards)
+            {
+                self.tracker.SeeCreature(self.guard.room.game.Players[0]);
+            }
+            orig(self);
+        }
+
+        // Change cycle length on request
+        private static void RainCycle_ctor(On.RainCycle.orig_ctor orig, RainCycle self, World world, float minutes)
+        {
+            orig(self, world, CurrentPlayer?.GetCycleLength() ?? minutes);
+        }
+
+        // Unlock gates permanently on request
+        private static void OverWorld_GateRequestsSwitchInitiation(On.OverWorld.orig_GateRequestsSwitchInitiation orig, OverWorld self, RegionGate reportBackToGate)
+        {
+            orig(self, reportBackToGate);
+            if (reportBackToGate != null && UsingCustomPlayer && CurrentPlayer.GatesPermanentlyUnlock)
+                reportBackToGate.Unlock();
+        }
+
+        // Add a quarter pip shower if the player uses quarter pips
+        // It's technically possible to change QuarterFood while the game is running
+        private static void FoodMeter_Update(On.HUD.FoodMeter.orig_Update orig, HUD.FoodMeter self)
+        {
+            if (self.quarterPipShower == null && UsingCustomPlayer && self.hud.owner is Player ply && ply.playerState.quarterFoodPoints > 0)
+                self.quarterPipShower = new HUD.FoodMeter.QuarterPipShower(self);
+            orig(self);
+        }
+
+        // Turn food into quarter pips
+        private static bool giveQuarterFood;
+        private static void Player_AddFood(On.Player.orig_AddFood orig, Player self, int add)
+        {
+            if(giveQuarterFood)
+            {
+                giveQuarterFood = false;
+                for (int i = 0; i < add; i++)
+                    self.AddQuarterFood();
+                giveQuarterFood = true;
+            } else
+                orig(self, add);
+        }
+
+        // Mark food to be turned into quarter pips if the current player uses Hunter's diet
+        private static void Player_ObjectEaten(On.Player.orig_ObjectEaten orig, Player self, IPlayerEdible edible)
+        {
+            try
+            {
+                giveQuarterFood = UsingCustomPlayer && CurrentPlayer.QuarterFood && !IsMeat(edible);
+                orig(self, edible);
+            } finally
+            {
+                giveQuarterFood = false;
+            }
+        }
+
+        private static bool IsMeat(IPlayerEdible edible)
+        {
+            return edible is Centipede       ||
+                   edible is VultureGrub     ||
+                   edible is Hazer           ||
+                   edible is EggBugEgg       ||
+                   edible is SmallNeedleWorm ||
+                   edible is JellyFish;
+        }
+
+        // Allow the player to each meat
+        private static bool lock_CanEatMeat = false;
+        private static bool Player_CanEatMeat(On.Player.orig_CanEatMeat orig, Player self, Creature crit)
+        {
+            if (lock_CanEatMeat || !UsingCustomPlayer) return orig(self, crit);
+
+            if (crit is IPlayerEdible || !crit.dead) return false;
+            lock_CanEatMeat = true;
+            try
+            {
+                return CurrentPlayer.CanEatMeat(self, crit);
+            }
+            finally
+            {
+                lock_CanEatMeat = false;
+            }
+        }
+
+        private static bool lock_SlugcatFoodMeter = false;
         private static IntVector2 SlugcatStats_SlugcatFoodMeter(On.SlugcatStats.orig_SlugcatFoodMeter orig, int slugcatNum)
         {
+            if (lock_SlugcatFoodMeter) return orig(slugcatNum);
+
             CustomPlayer ply = GetCustomPlayer(slugcatNum);
             if(ply == null) return orig(slugcatNum);
 
             IntVector2 o = new IntVector2();
+            lock_SlugcatFoodMeter = true;
             ply.GetFoodMeter(out o.x, out o.y);
+            lock_SlugcatFoodMeter = false;
             return o;
         }
 
+        private static bool lock_SlugcatStatsCtor = false;
         private static void SlugcatStats_ctor(On.SlugcatStats.orig_ctor orig, SlugcatStats self, int slugcatNumber, bool malnourished)
         {
             orig(self, slugcatNumber, malnourished);
+            if (lock_SlugcatStatsCtor) return;
+
+            lock_SlugcatStatsCtor = true;
             CustomPlayer ply = GetCustomPlayer(slugcatNumber);
             ply?.GetStatsInternal(self);
+            lock_SlugcatStatsCtor = false;
         }
 
         private static Color PlayerGraphics_SlugcatColor(On.PlayerGraphics.orig_SlugcatColor orig, int i)
@@ -144,6 +251,8 @@ namespace SlugBase
             orig(self);
             EndGame();
         }
+
+        #endregion HOOKS
 
         internal static void StartGame(int slugcatNumber)
         {
