@@ -77,7 +77,7 @@ namespace SlugBase
         public virtual string StartRoom => "SU_C04";
 
         /// <summary>
-        /// Called once as a game starts from the select screen.
+        /// Called once as a game starts from the select screen or multiplayer menu.
         /// </summary>
         /// <remarks>
         /// This is called as soon possible, the moment that user's character choice is locked in.
@@ -208,8 +208,6 @@ namespace SlugBase
         /// If your character needs to save more data, this may be overridden 
         /// to return a new instance of a child class of <see cref="CustomSaveState"/>.
         /// </remarks>
-        /// <param name="progression"></param>
-        /// <returns></returns>
         public virtual CustomSaveState CreateNewSave(PlayerProgression progression) => new CustomSaveState(progression, this);
 
 

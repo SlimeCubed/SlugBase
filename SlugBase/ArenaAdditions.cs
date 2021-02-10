@@ -16,12 +16,23 @@ namespace SlugBase
 
         public static void ApplyHooks()
         {
+            On.Menu.MultiplayerMenu.Singal += MultiplayerMenu_Singal;
             On.ArenaSetup.SaveToFile += ArenaSetup_SaveToFile;
             On.ArenaSetup.LoadFromFile += ArenaSetup_LoadFromFile;
             On.ArenaGameSession.ctor += ArenaGameSession_ctor;
             On.Menu.MultiplayerMenu.ctor += MultiplayerMenu_ctor;
 
             arenaSettingsPath = Path.Combine(SaveManager.GetSaveFileDirectory(), "arenaSetup.txt");
+        }
+
+        private static void MultiplayerMenu_Singal(On.Menu.MultiplayerMenu.orig_Singal orig, MultiplayerMenu self, MenuObject sender, string message)
+        {
+            orig(self, sender, message);
+            if(self.manager.upcomingProcess == ProcessManager.ProcessID.Game && arenaCharacter.TryGet(self.GetArenaSetup, out var ply))
+            {
+                if(ply.type == PlayerSelector.PlayerDescriptor.Type.SlugBase)
+                    ply.player.Prepare();
+            }
         }
 
         private static void ArenaSetup_SaveToFile(On.ArenaSetup.orig_SaveToFile orig, ArenaSetup self)

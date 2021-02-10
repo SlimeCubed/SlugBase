@@ -36,9 +36,6 @@ namespace SlugBase
             /*
              * TODO:
              * 
-             * Only apply hooks once a player is registered to avoid side-effects (?)
-             * Look into Scavenger.WantToLethallyAttack
-             * 
              */
 
             /*
