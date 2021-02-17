@@ -66,6 +66,9 @@ namespace SlugBase
                         foreach (JsonObj imageData in (JsonList)value)
                             Images.Add(new SceneImage(this, imageData));
                         break;
+                    default:
+                        properties[name.ToLower()] = value;
+                        break;
                 }
             }
             catch (Exception e)
@@ -85,9 +88,10 @@ namespace SlugBase
                 if (Images[i].depth < newImage.depth)
                 {
                     Images.Insert(i, newImage);
-                    break;
+                    return;
                 }
             }
+            Images.Add(newImage);
         }
 
         internal static T GetPropFromDict<T>(string key, JsonObj dict)

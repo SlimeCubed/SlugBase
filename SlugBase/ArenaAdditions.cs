@@ -178,6 +178,7 @@ namespace SlugBase
                 private RoundedRect back;
                 private CreatureSymbol icon;
                 private FLabel name;
+                private bool snap;
 
                 private PlayerSelector Selector => (PlayerSelector)owner;
 
@@ -199,6 +200,9 @@ namespace SlugBase
                     name.anchorX = 0f;
                     name.anchorY = 0.5f;
                     Container.AddChild(name);
+
+                    // Don't animate when first showing the screen
+                    snap = true;
                 }
 
                 public override void RemoveSprites()
@@ -241,6 +245,12 @@ namespace SlugBase
                     if (playerSelected)
                         targetWidth = height + 15f + name.textRect.width;
                     size.x = Custom.LerpAndTick(size.x, targetWidth, 0.2f, 2f);
+
+                    if(snap)
+                    {
+                        snap = false;
+                        size.x = targetWidth;
+                    }
 
                     // Change button size a little when selected
                     back.addSize.x = Mathf.Clamp(back.addSize.x + (playerSelected ? 0.5f : -0.5f), -1f, 1f);

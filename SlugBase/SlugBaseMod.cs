@@ -1,6 +1,8 @@
 ﻿using System;
+using System.IO;
 using System.Collections.Generic;
 using Partiality.Modloader;
+using UnityEngine;
 
 namespace SlugBase
 {
@@ -36,6 +38,8 @@ namespace SlugBase
             /*
              * TODO:
              * 
+             * Scene editor (maybe)
+             * 
              */
 
             /*
@@ -45,6 +49,7 @@ namespace SlugBase
              * Toggle for if you can flarebomb skip
              * 
              */
+
         }
 
         public override void OnLoad()
@@ -53,7 +58,7 @@ namespace SlugBase
             CustomSceneManager.ApplyHooks();
             PlayerManager.ApplyHooks();
             SaveManager.ApplyHooks();
-            SceneEditor.ApplyHooks();
+            //SceneEditor.ApplyHooks();
             SelectMenu.ApplyHooks();
             ShelterScreens.ApplyHooks();
             WorldFixes.ApplyHooks();

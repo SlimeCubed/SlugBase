@@ -123,23 +123,53 @@ namespace SlugBase
         }
 
         // Override select scenes for custom slugcats
-        private static void SlugcatPage_AddImage(On.Menu.SlugcatSelectMenu.SlugcatPage.orig_AddImage orig, Menu.SlugcatSelectMenu.SlugcatPage self, bool ascended)
+        private static void SlugcatPage_AddImage(On.Menu.SlugcatSelectMenu.SlugcatPage.orig_AddImage orig, SlugcatSelectMenu.SlugcatPage self, bool ascended)
         {
             CustomPlayer ply = PlayerManager.GetCustomPlayer(self.slugcatNumber);
-            string sceneName = ascended ? "SelectMenuAscended" : "SelectMenu";
-            if (ply == null || !ply.HasScene(sceneName))
+            
+            // Do not modify scenes for any non-SlugBase slugcats
+            if(ply == null)
             {
                 orig(self, ascended);
                 return;
             }
+
+            // Use Survivor's default scenes on the select menu
+            string sceneName = ascended ? "SelectMenuAscended" : "SelectMenu";
+            if (!ply.HasScene(sceneName))
+            {
+                orig(self, ascended);
+                
+                // Fix the scene position being off
+                if(self.sceneOffset == default(Vector2))
+                    self.sceneOffset = new Vector2(-10f, 100f);
+                
+                // Fix the wrong scene loading in when ascended
+                if (ascended && self.slugcatImage.sceneID == MenuScene.SceneID.Slugcat_White)
+                {
+                    self.slugcatImage.RemoveSprites();
+                    self.RemoveSubObject(self.slugcatImage);
+
+                    self.slugcatImage = new InteractiveMenuScene(self.menu, self, MenuScene.SceneID.Ghost_White);
+                    self.subObjects.Add(self.slugcatImage);
+                }
+
+                return;
+            }
+
+            // Make sure it doesn't crash if the mark or glow is missing
+            self.markSquare = new FSprite("pixel") { isVisible = false };
+            self.markGlow = new FSprite("pixel") { isVisible = false };
+            self.glowSpriteA = new FSprite("pixel") { isVisible = false };
+            self.glowSpriteB = new FSprite("pixel") { isVisible = false };
+
 
             // This function intentionally does not call the original
             // If this mod has claimed a slot, it seems best to not let other mods try to change this screen
 
             // Taken from SlugcatPage.AddImage
             self.imagePos = new Vector2(683f, 484f);
-            self.sceneOffset = new Vector2(0f, 100f);
-            self.slugcatDepth = 1f;
+            self.sceneOffset = new Vector2(-10f, 100f);
 
             // Load a custom character's select screen from resources
             CustomScene scene = OverrideNextScene(ply, sceneName, img =>
@@ -153,7 +183,7 @@ namespace SlugBase
             self.slugcatDepth = scene.GetProperty<float?>("slugcatdepth") ?? 3f;
 
             // Add mark
-            MarkImage mark = new MarkImage(scene);
+            MarkImage mark = new MarkImage(scene, self.slugcatDepth + 0.1f);
             scene.InsertImage(mark);
 
             // Add glow
@@ -167,8 +197,8 @@ namespace SlugBase
             self.subObjects.Add(self.slugcatImage);
 
             // Find the relative mark and glow positions
-            self.markOffset = mark.Pos - new Vector2(self.MidXpos, self.imagePos.y + 150f);
-            self.glowOffset = glow.Pos - new Vector2(self.MidXpos, self.imagePos.y);
+            self.markOffset = mark.Pos - new Vector2(self.MidXpos, self.imagePos.y + 150f) + self.sceneOffset;
+            self.glowOffset = glow.Pos - new Vector2(self.MidXpos, self.imagePos.y) + self.sceneOffset;
         }
 
         // Add custom slugcat select screens
@@ -287,10 +317,10 @@ namespace SlugBase
 
         private class MarkImage : SceneImage
         {
-            public MarkImage(CustomScene owner) : base(owner)
+            public MarkImage(CustomScene owner, float depth) : base(owner)
             {
                 Pos = new Vector2(owner.GetProperty<float?>("markx") ?? 683f, owner.GetProperty<float?>("marky") ?? 484f);
-                Depth = 0f;
+                Depth = depth;
             }
 
             public override string DisplayName => "MARK";
@@ -331,6 +361,7 @@ namespace SlugBase
             public GlowImage(CustomScene owner, float depth) : base(owner)
             {
                 Pos = new Vector2(owner.GetProperty<float?>("glowx") ?? 683f, owner.GetProperty<float?>("glowy") ?? 484f);
+                Debug.Log($"Glow is at {Pos}");
                 Depth = depth;
             }
 

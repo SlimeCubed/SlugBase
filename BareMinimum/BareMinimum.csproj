@@ -4,11 +4,11 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{87055141-6463-4F6F-B072-FB85F52B5A48}</ProjectGuid>
+    <ProjectGuid>{C462D418-374C-4B99-BAF7-925248899242}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>ExampleSlugcat</RootNamespace>
-    <AssemblyName>ExampleSlugcat</AssemblyName>
+    <RootNamespace>BareMinimum</RootNamespace>
+    <AssemblyName>BareMinimum</AssemblyName>
     <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <Deterministic>true</Deterministic>
@@ -39,10 +39,6 @@
       <HintPath>..\..\rwmodlibspublic\HOOKS-Assembly-CSharp.dll</HintPath>
       <Private>False</Private>
     </Reference>
-    <Reference Include="MonoMod.RuntimeDetour">
-      <HintPath>..\..\rwmodlibspublic\MonoMod.RuntimeDetour.dll</HintPath>
-      <Private>False</Private>
-    </Reference>
     <Reference Include="Partiality">
       <HintPath>..\..\rwmodlibspublic\Partiality.dll</HintPath>
       <Private>False</Private>
@@ -59,7 +55,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="SprinterSlugcat.cs" />
+    <Compile Include="BareMinimum.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>

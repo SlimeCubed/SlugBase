@@ -85,6 +85,8 @@ namespace SlugBase
 
         internal static void ApplyHooks()
         {
+            On.WorldLoader.GeneratePopulation += WorldLoader_GeneratePopulation;
+            On.SaveState.ctor += SaveState_ctor;
             On.TempleGuardAI.Update += TempleGuardAI_Update;
             On.RainCycle.ctor += RainCycle_ctor;
             On.OverWorld.GateRequestsSwitchInitiation += OverWorld_GateRequestsSwitchInitiation;
@@ -99,7 +101,30 @@ namespace SlugBase
             On.RainWorldGame.ShutDownProcess += RainWorldGame_ShutDownProcess;
         }
 
+
         #region HOOKS
+
+        // Stop Iggy from spawning in on request
+        private static void WorldLoader_GeneratePopulation(On.WorldLoader.orig_GeneratePopulation orig, WorldLoader self, bool fresh)
+        {
+            if (!UsingCustomPlayer || CurrentPlayer.HasGuideOverseer)
+            {
+                orig(self, fresh);
+                return;
+            }
+            float pgosc = self.world.region.regionParams.playerGuideOverseerSpawnChance;
+            self.world.region.regionParams.playerGuideOverseerSpawnChance = 0f;
+            orig(self, fresh);
+            self.world.region.regionParams.playerGuideOverseerSpawnChance = pgosc;
+        }
+
+        // Remove dreams on request
+        private static void SaveState_ctor(On.SaveState.orig_ctor orig, SaveState self, int saveStateNumber, PlayerProgression progression)
+        {
+            orig(self, saveStateNumber, progression);
+            if (!(CurrentPlayer?.HasDreams ?? true))
+                self.dreamsState = null;
+        }
 
         // Disallow the guardian skip on request
         private static void TempleGuardAI_Update(On.TempleGuardAI.orig_Update orig, TempleGuardAI self)

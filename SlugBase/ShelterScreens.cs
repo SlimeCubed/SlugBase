@@ -1,12 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using UnityEngine;
 using Menu;
 using MonoMod.RuntimeDetour;
 using RWCustom;
 using System.Reflection;
+using System.IO;
 
 namespace SlugBase
 {
@@ -18,17 +17,62 @@ namespace SlugBase
 
         public static void ApplyHooks()
         {
+            On.Menu.MenuScene.BuildScene += MenuScene_BuildScene;
+            On.Menu.MenuScene.AddIllustration += MenuScene_AddIllustration;
             On.MainLoopProcess.ShutDownProcess += MainLoopProcess_ShutDownProcess;
             On.Menu.SleepAndDeathScreen.AddBkgIllustration += SleepAndDeathScreen_AddBkgIllustration;
             On.Menu.SleepAndDeathScreen.Update += SleepAndDeathScreen_Update;
         }
 
+		// Image positions are loaded from positions.txt at the end of BuildScene
+		// This gets around that by moving them after
+        private static void MenuScene_BuildScene(On.Menu.MenuScene.orig_BuildScene orig, MenuScene self)
+        {
+			orig(self);
+			if(moveImages.Count > 0)
+            {
+				foreach(var pair in moveImages)
+                {
+					pair.Key.lastPos = pair.Value;
+					pair.Key.pos = pair.Value;
+                }
+				moveImages.Clear();
+            }
+        }
+
+		// The default sleep screen is Hunter, which doesn't line up with the default select screen
+		// Change Hunter to Survivor for the sleep screen
+		private static List<KeyValuePair<MenuDepthIllustration, Vector2>> moveImages = new List<KeyValuePair<MenuDepthIllustration, Vector2>>();
+        private static void MenuScene_AddIllustration(On.Menu.MenuScene.orig_AddIllustration orig, MenuScene self, MenuIllustration newIllu)
+        {
+			if (newIllu.fileName == "Sleep - 2 - Red"
+				&& !(PlayerManager.GetCustomPlayer(self.menu.manager.rainWorld.progression.miscProgressionData.currentlySelectedSinglePlayerSlugcat)?.HasScene("SleepScreen") ?? false)
+				&& ((self.menu as SleepAndDeathScreen)?.IsSleepScreen ?? false)
+				&& newIllu is MenuDepthIllustration mdi)
+			{
+				string folder = string.Concat(new object[]
+				{
+					"Scenes",
+					Path.DirectorySeparatorChar,
+					"Sleep Screen - White",
+				});
+				newIllu.RemoveSprites();
+				newIllu = new MenuDepthIllustration(newIllu.menu, newIllu.owner, folder, "Sleep - 2 - White", new Vector2(677f, 63f), mdi.depth, mdi.shader);
+				moveImages.Add(new KeyValuePair<MenuDepthIllustration, Vector2>((MenuDepthIllustration)newIllu, new Vector2(677f, 63f)));
+			}
+
+			orig(self, newIllu);
+        }
+
+		// Plug a memory leak
         private static void MainLoopProcess_ShutDownProcess(On.MainLoopProcess.orig_ShutDownProcess orig, MainLoopProcess self)
         {
 			orig(self);
 			updateDelegates.Clear();
         }
 
+		// The original method may crash when called, since it assumes that there are 3+ images in the scene
+		// Replace the method entirely for modded slugcats
         private static void SleepAndDeathScreen_Update(On.Menu.SleepAndDeathScreen.orig_Update orig, SleepAndDeathScreen self)
         {
             if(self.scene.sceneFolder != resourceFolderName)
@@ -90,9 +134,11 @@ namespace SlugBase
 			}
 		}
 
+		// Parse FADE tag
         private static void SleepAndDeathScreen_AddBkgIllustration(On.Menu.SleepAndDeathScreen.orig_AddBkgIllustration orig, SleepAndDeathScreen self)
         {
             orig(self);
+
 			for(int i = 0; i < self.scene.subObjects.Count; i++)
             {
 				if (!(self.scene.subObjects[i] is MenuIllustration illust)) continue;

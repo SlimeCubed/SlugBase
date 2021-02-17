@@ -49,13 +49,15 @@ namespace ExampleSlugcat
 
     internal class SprinterSlugcat : CustomPlayer
     {
-        public SprinterSlugcat() : base("Sprinter", PlayerFormatVersion.V_0_1) { }
+        public SprinterSlugcat() : base("Sprinter", PlayerFormatVersion.V1) { }
 
         protected override void Enable() => ExampleSlugcatMod.enabled = true;
 
         protected override void Disable() => ExampleSlugcatMod.enabled = false;
 
         public override Color? SlugcatColor() => new Color(0.37f, 0.36f, 0.91f);
+
+        public override bool HasGuideOverseer => false;
 
         internal static string startRoom = "UW_I01";
         public override string StartRoom => startRoom;
@@ -66,7 +68,6 @@ namespace ExampleSlugcat
             stats.poleClimbSpeedFac *= 1.5f;
             stats.corridorClimbSpeedFac *= 1.5f;
             stats.loudnessFac *= 2f;
-            stats.bodyWeightFac *= 0.75f;
         }
 
         public override void GetFoodMeter(out int maxFood, out int foodToSleep)

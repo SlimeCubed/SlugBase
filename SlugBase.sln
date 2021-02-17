@@ -7,6 +7,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SlugBase", "SlugBase\SlugBa
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ExampleSlugcat", "ExampleSlugcat\ExampleSlugcat.csproj", "{87055141-6463-4F6F-B072-FB85F52B5A48}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BareMinimum", "BareMinimum\BareMinimum.csproj", "{C462D418-374C-4B99-BAF7-925248899242}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -21,6 +23,10 @@ Global
 		{87055141-6463-4F6F-B072-FB85F52B5A48}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{87055141-6463-4F6F-B072-FB85F52B5A48}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{87055141-6463-4F6F-B072-FB85F52B5A48}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C462D418-374C-4B99-BAF7-925248899242}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C462D418-374C-4B99-BAF7-925248899242}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C462D418-374C-4B99-BAF7-925248899242}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C462D418-374C-4B99-BAF7-925248899242}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

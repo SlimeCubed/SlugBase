@@ -118,6 +118,10 @@ namespace SlugBase
         /// Get the amount of food that this character needs to sleep and the total amount that it can hold.
         /// Defaults to Survivor's food meter.
         /// </summary>
+        /// <remarks>
+        /// Changing this will result in the tutorial text being incorrect. Consider changing it, or
+        /// disabling it by setting <see cref="HasGuideOverseer"/> to false.
+        /// </remarks>
         /// <param name="maxFood">The amount of food that this character can hold.</param>
         /// <param name="foodToSleep">The amount of food that this character needs to sleep.</param>
         public virtual void GetFoodMeter(out int maxFood, out int foodToSleep)
@@ -180,8 +184,8 @@ namespace SlugBase
         /// The name to display to the user, such as on the player select screen.
         /// </summary>
         /// <remarks>
-        /// This defaults to your custom slugcat's internal name.
-        /// This should be overridden for localization, or if the name the user is shown must differ from its internal name.
+        /// Defaults to your custom slugcat's internal name.
+        /// This should start with "The", and the first letter of each word should be capitalized.
         /// </remarks>
         public virtual string DisplayName => Name;
 
@@ -211,9 +215,9 @@ namespace SlugBase
         public virtual CustomSaveState CreateNewSave(PlayerProgression progression) => new CustomSaveState(progression, this);
 
 
-        ///////////////
-        // RESOURCES //
-        ///////////////
+        //////////////////////////
+        // SCENES AND RESOURCES //
+        //////////////////////////
 
         /// <summary>
         /// Gets a stream containing the specified resource.
@@ -230,10 +234,12 @@ namespace SlugBase
         {
             try
             {
-                //Debug.Log($"Loading {Name} resource from \"{string.Join("/", path)}\"");
+                //Debug.Log($"Getting resource: {DefaultResourcePath}\\{string.Join("\\", path)}");
                 return File.OpenRead(Path.Combine(DefaultResourcePath, string.Join(Path.DirectorySeparatorChar.ToString(), path)));
-            } catch
+            }
+            catch //(Exception e)
             {
+                //Debug.Log(e);
                 return null;
             }
         }
@@ -353,6 +359,18 @@ namespace SlugBase
             CustomSceneManager.ClearSceneOverride();
         }
 
+        /// <summary>
+        /// True if dreams can play when this character is selected.
+        /// Defaults to false.
+        /// </summary>
+        public virtual bool HasDreams => false;
+
+        /// <summary>
+        /// True if the tutorial overseer follows this character.
+        /// Defaults to true.
+        /// </summary>
+        public virtual bool HasGuideOverseer => true;
+
         /////////////////////////////
         // BACKWARDS COMPATIBILITY //
         /////////////////////////////
@@ -366,7 +384,7 @@ namespace SlugBase
         /// </remarks>
         public enum PlayerFormatVersion
         {
-            V_0_1 = 0
+            V1 = 0
         }
     }
 }

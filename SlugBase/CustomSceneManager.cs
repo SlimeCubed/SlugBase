@@ -61,6 +61,8 @@ namespace SlugBase
         {
             orig(self, storyGameCharacter);
 
+            if (!self.restartChecked && self.manager.rainWorld.progression.IsThereASavedGame(storyGameCharacter)) return;
+
             // Only continue to the slideshow if this character has an intro slideshow
             CustomPlayer ply = PlayerManager.GetCustomPlayer(storyGameCharacter);
             if (ply == null) return;
@@ -79,6 +81,26 @@ namespace SlugBase
         // Same as below, but for slideshows
         private static void SlideShow_ctor(On.Menu.SlideShow.orig_ctor orig, SlideShow self, ProcessManager manager, SlideShow.SlideShowID slideShowID)
         {
+            // Automatically override slideshows if the current custom player has a slideshow by the same name
+            CustomPlayer currentPlayer;
+            if (PlayerManager.UsingCustomPlayer) currentPlayer = PlayerManager.CurrentPlayer;
+            else
+            {
+                int index;
+                if (manager.currentMainLoop is RainWorldGame rwg)
+                    index = rwg.StoryCharacter;
+                else
+                    index = manager.rainWorld.progression.PlayingAsSlugcat;
+                currentPlayer = PlayerManager.GetCustomPlayer(index);
+            }
+
+            if (currentPlayer != null)
+            {
+                string slideshowName = self.slideShowID.ToString();
+                if (slideshowOverride == null && currentPlayer.HasSlideshow(slideshowName))
+                    OverrideNextSlideshow(currentPlayer, slideshowName);
+            }
+
             if (slideshowOverride == null)
             {
                 orig(self, manager, slideShowID);
