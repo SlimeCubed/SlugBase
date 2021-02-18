@@ -14,10 +14,19 @@ namespace SlugBase
     /// </summary>
     public class CustomSlideshow
     {
+        /// <summary>
+        /// The SlugBase character that owns this slideshow.
+        /// </summary>
         public SlugBaseCharacter Owner { get; private set; }
 
+        /// <summary>
+        /// The name of this slideshow.
+        /// </summary>
         public string Name { get; private set; }
 
+        /// <summary>
+        /// A list of slides to display during this slideshow.
+        /// </summary>
         public List<SlideshowSlide> Slides { get; private set; }
 
         /// <summary>

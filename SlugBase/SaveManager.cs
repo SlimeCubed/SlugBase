@@ -224,6 +224,10 @@ namespace SlugBase
             return orig(self, saveStateNumber);
         }
 
+        /// <summary>
+        /// Gets the path that contains all SlugBase character save files.
+        /// </summary>
+        /// <returns>An absolute path to the save file directory.</returns>
         public static string GetSaveFileDirectory()
         {
             return string.Concat(new object[] {
@@ -235,6 +239,12 @@ namespace SlugBase
             });
         }
 
+        /// <summary>
+        /// Gets the path to a specific SlugBase character's save file.
+        /// </summary>
+        /// <param name="name">The name of the SlugBase character.</param>
+        /// <param name="slot">The game's current save slot.</param>
+        /// <returns>An absolute path to the save file.</returns>
         public static string GetSaveFilePath(string name, int slot)
         {
             // UserData\Player Name-0.txt
@@ -248,11 +258,24 @@ namespace SlugBase
             });
         }
 
+        /// <summary>
+        /// Checks for a save file for a specific SlugBase character.
+        /// </summary>
+        /// <param name="name">The name of the SlugBase character.</param>
+        /// <param name="slot">The game's current save slot.</param>
+        /// <returns>True if the save file exists, false otherwise.</returns>
         public static bool HasCustomSaveData(string name, int slot)
         {
             return File.Exists(GetSaveFilePath(name, slot));
         }
 
+        /// <summary>
+        /// Gets a summary of the content in a SlugBase character's save file.
+        /// </summary>
+        /// <param name="rainWorld">The current <see cref="RainWorld"/> instance.</param>
+        /// <param name="name">The name of the SlugBase character.</param>
+        /// <param name="slot">The game's current save slot.</param>
+        /// <returns>A summary of the given character's save file.</returns>
         public static SlugcatSelectMenu.SaveGameData GetCustomSaveData(RainWorld rainWorld, string name, int slot)
         {
             if (!HasCustomSaveData(name, slot)) return null;
@@ -260,20 +283,20 @@ namespace SlugBase
             string saveData = File.ReadAllText(GetSaveFilePath(name, slot));
 
             List<SaveStateMiner.Target> targets = new List<SaveStateMiner.Target>();
-            targets.Add(new SaveStateMiner.Target(">DENPOS"         , "<svB>", "<svA>", 20));
-            targets.Add(new SaveStateMiner.Target(">CYCLENUM"       , "<svB>", "<svA>", 50));
-            targets.Add(new SaveStateMiner.Target(">FOOD"           , "<svB>", "<svA>", 20));
-            targets.Add(new SaveStateMiner.Target(">HASTHEGLOW"     , null   , "<svA>", 20));
+            targets.Add(new SaveStateMiner.Target(">DENPOS", "<svB>", "<svA>", 20));
+            targets.Add(new SaveStateMiner.Target(">CYCLENUM", "<svB>", "<svA>", 50));
+            targets.Add(new SaveStateMiner.Target(">FOOD", "<svB>", "<svA>", 20));
+            targets.Add(new SaveStateMiner.Target(">HASTHEGLOW", null, "<svA>", 20));
             targets.Add(new SaveStateMiner.Target(">REINFORCEDKARMA", "<dpB>", "<dpA>", 20));
-            targets.Add(new SaveStateMiner.Target(">KARMA"          , "<dpB>", "<dpA>", 20));
-            targets.Add(new SaveStateMiner.Target(">KARMACAP"       , "<dpB>", "<dpA>", 20));
-            targets.Add(new SaveStateMiner.Target(">HASTHEMARK"     , null   , "<dpA>", 20));
-            targets.Add(new SaveStateMiner.Target(">REDEXTRACYCLES" , null   , "<svA>", 20));
-            targets.Add(new SaveStateMiner.Target(">ASCENDED"       , null   , "<dpA>", 20));
+            targets.Add(new SaveStateMiner.Target(">KARMA", "<dpB>", "<dpA>", 20));
+            targets.Add(new SaveStateMiner.Target(">KARMACAP", "<dpB>", "<dpA>", 20));
+            targets.Add(new SaveStateMiner.Target(">HASTHEMARK", null, "<dpA>", 20));
+            targets.Add(new SaveStateMiner.Target(">REDEXTRACYCLES", null, "<svA>", 20));
+            targets.Add(new SaveStateMiner.Target(">ASCENDED", null, "<dpA>", 20));
 
             List<SaveStateMiner.Result> results = SaveStateMiner.Mine(rainWorld, saveData, targets);
             SlugcatSelectMenu.SaveGameData saveGameData = new SlugcatSelectMenu.SaveGameData();
-            
+
             for (int i = 0; i < results.Count; i++)
             {
                 string targetName = results[i].name;
@@ -315,7 +338,8 @@ namespace SlugBase
                             saveGameData.ascended = true;
                             break;
                     }
-                } catch(Exception e)
+                }
+                catch (Exception e)
                 {
                     Debug.LogException(new Exception($"Failed to parse value from slugbase save (\"{name}\") for \"{targetName}\"!", e));
                 }

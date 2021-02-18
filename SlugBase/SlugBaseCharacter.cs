@@ -28,6 +28,7 @@ namespace SlugBase
         /// Create a new custom character.
         /// </summary>
         /// <param name="name">The name of the custom character, containing only alphanumericals, underscores, and spaces.</param>
+        /// <param name="version">The version this mod was first built with.</param>
         /// <param name="useSpawns">
         /// The character to copy creatures and world state from.
         /// The value should be 0 (survivor), 1 (monk) or 2 (hunter).
@@ -390,6 +391,9 @@ namespace SlugBase
         /// </remarks>
         public enum PlayerFormatVersion
         {
+            /// <summary>
+            /// The current version. Use this one.
+            /// </summary>
             V1 = 0
         }
     }

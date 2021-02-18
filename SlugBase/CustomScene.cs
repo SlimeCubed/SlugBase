@@ -180,11 +180,19 @@ namespace SlugBase
             return obj;
         }
 
+        /// <summary>
+        /// Creates a JSON string that represents this object.
+        /// </summary>
+        /// <returns>A JSON string.</returns>
         public override string ToString()
         {
             return ToJsonObj().toJson();
         }
 
+        /// <summary>
+        /// Disables images in this scene based on a filter.
+        /// </summary>
+        /// <param name="filter">A delegate that returns false for any images that should be hidden.</param>
         public void ApplyFilter(SceneImageFilter filter)
         {
             foreach (var img in Images)
@@ -325,6 +333,10 @@ namespace SlugBase
             }
         }
 
+        /// <summary>
+        /// Converts this image into a JSON string.
+        /// </summary>
+        /// <returns>A JSON string.</returns>
         public override string ToString() => ToJsonObj().toJson();
 
         /// <summary>

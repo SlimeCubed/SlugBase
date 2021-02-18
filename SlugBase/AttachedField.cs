@@ -54,7 +54,7 @@ public class AttachedField<TKey, TValue>
     /// Retrieves a stored value for a given object.
     /// </summary>
     /// <param name="obj">The object to get from.</param>
-    /// <returns>The previously set value for this object, or default(<see cref="TValue"/>) if unset.</returns>
+    /// <returns>The previously set value for this object, or default(<typeparamref name="TValue"/>) if unset.</returns>
     public TValue Get(TKey obj)
     {
         if (obj == null) throw new ArgumentNullException(nameof(obj));
@@ -67,7 +67,7 @@ public class AttachedField<TKey, TValue>
     /// </summary>
     /// <param name="obj">The object to get from.</param>
     /// <param name="value">The previously set value for this obejct.</param>
-    /// <returns>True if a value exists for <see cref="obj"/>, false otherwise.</returns>
+    /// <returns>True if a value exists for <paramref name="obj"/>, false otherwise.</returns>
     public bool TryGet(TKey obj, out TValue value)
     {
         if (obj == null)
@@ -78,6 +78,11 @@ public class AttachedField<TKey, TValue>
         return _dict.TryGetValue(obj, out value);
     }
 
+    /// <summary>
+    /// Sets or retrieves the value attached to object.
+    /// </summary>
+    /// <param name="obj">The object key.</param>
+    /// <returns>The attached value, or default(<typeparamref name="TValue"/>) if the value has not been set.</returns>
     public TValue this[TKey obj]
     {
         get => Get(obj);

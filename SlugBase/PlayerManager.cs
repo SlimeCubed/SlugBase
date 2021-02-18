@@ -7,6 +7,9 @@ using UnityEngine;
 
 namespace SlugBase
 {
+    /// <summary>
+    /// Contains utilities related to SlugBase characters.
+    /// </summary>
     public static class PlayerManager
     {
         internal static List<SlugBaseCharacter> customPlayers = new List<SlugBaseCharacter>();
