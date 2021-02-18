@@ -9,20 +9,20 @@ namespace SlugBase
 {
     public static class PlayerManager
     {
-        internal static List<CustomPlayer> customPlayers = new List<CustomPlayer>();
-        private static Dictionary<string, CustomPlayer> customPlayersByName = new Dictionary<string, CustomPlayer>();
-        private static CustomPlayer currentPlayer;
+        internal static List<SlugBaseCharacter> customPlayers = new List<SlugBaseCharacter>();
+        private static Dictionary<string, SlugBaseCharacter> customPlayersByName = new Dictionary<string, SlugBaseCharacter>();
+        private static SlugBaseCharacter currentPlayer;
 
         /// <summary>
-        /// Returns a path to the folder containing resources for custom slugcats.
+        /// Returns a path to the folder containing resources for SlugBase characters.
         /// </summary>
-        public static string ResourceDirectory => Path.Combine(Custom.RootFolderDirectory(), "CustomSlugcats");
+        public static string ResourceDirectory => Path.Combine(Custom.RootFolderDirectory(), Path.Combine("Mods", "SlugBase"));
 
         /// <summary>
         /// The custom character that is being played in the current game.
         /// This will be null if there is not an ongoing game, or if the current character was not added through SlugBase.
         /// </summary>
-        public static CustomPlayer CurrentPlayer
+        public static SlugBaseCharacter CurrentCharacter
         {
             get => currentPlayer;
             private set => currentPlayer = value;
@@ -31,20 +31,20 @@ namespace SlugBase
         /// <summary>
         /// True if the current game session uses a player added by SlugBase.
         /// </summary>
-        public static bool UsingCustomPlayer => currentPlayer != null;
+        public static bool UsingCustomCharacter => currentPlayer != null;
 
         /// <summary>
-        /// Registers a new player to appear in the select menu.
+        /// Registers a new character to appear in the select menu.
         /// </summary>
         /// <param name="newPlayer">The player to register.</param>
-        /// <exception cref="ArgumentException">Thrown when a custom player with this name already exists.</exception>
-        /// <exception cref="InvalidOperationException">Thrown when a custom player is registered after the game has started.</exception>
-        public static void RegisterPlayer(CustomPlayer newPlayer)
+        /// <exception cref="ArgumentException">Thrown when a SlugBase character with this name already exists.</exception>
+        /// <exception cref="InvalidOperationException">Thrown when a SlugBase character is registered after the game has started.</exception>
+        public static void RegisterPlayer(SlugBaseCharacter newPlayer)
         {
-            if (customPlayersByName.ContainsKey(newPlayer.Name)) throw new ArgumentException("A custom player with the same name already exists!");
+            if (customPlayersByName.ContainsKey(newPlayer.Name)) throw new ArgumentException("A character with the same name already exists!");
 
             customPlayersByName[newPlayer.Name] = newPlayer;
-            Debug.Log($"Registered SlugBase slugcat: \"{newPlayer.Name}\"");
+            Debug.Log($"Registered SlugBase character: \"{newPlayer.Name}\"");
 
             // Insert the new player into the list in alphabetical order
             int i;
@@ -56,17 +56,17 @@ namespace SlugBase
         }
 
         /// <summary>
-        /// Gets all registered custom players in alphabetical order.
+        /// Gets all registered SlugBase characters in alphabetical order.
         /// </summary>
-        /// <returns>A read-only collection containing all registered custom players.</returns>
-        public static ReadOnlyCollection<CustomPlayer> GetCustomPlayers() => customPlayers.AsReadOnly();
+        /// <returns>A read-only collection containing all registered SlugBase characters.</returns>
+        public static ReadOnlyCollection<SlugBaseCharacter> GetCustomPlayers() => customPlayers.AsReadOnly();
 
         /// <summary>
-        /// Gets a custom player by name.
+        /// Gets a SlugBase character by name.
         /// </summary>
         /// <param name="name">The name to search for.</param>
-        /// <returns>The custom player, or null if it was not found.</returns>
-        public static CustomPlayer GetCustomPlayer(string name) => customPlayersByName.TryGetValue(name, out CustomPlayer ply) ? ply : null;
+        /// <returns>The character, or null if it was not found.</returns>
+        public static SlugBaseCharacter GetCustomPlayer(string name) => customPlayersByName.TryGetValue(name, out SlugBaseCharacter ply) ? ply : null;
 
         /// <summary>
         /// Retrieves the SlugBase character with the given index.
@@ -76,8 +76,8 @@ namespace SlugBase
         /// <see cref="GetCustomPlayer(string)"/> should be used instead whenever possible.
         /// </remarks>
         /// <param name="index">The slugcat number of this character.</param>
-        /// <returns>A <see cref="CustomPlayer"/> instace with the given index or null.</returns>
-        public static CustomPlayer GetCustomPlayer(int index)
+        /// <returns>A <see cref="SlugBaseCharacter"/> instace with the given index or null.</returns>
+        public static SlugBaseCharacter GetCustomPlayer(int index)
         {
             for (int i = 0; i < customPlayers.Count; i++) if (customPlayers[i].slugcatIndex == index) return customPlayers[i];
             return null;
@@ -107,7 +107,7 @@ namespace SlugBase
         // Stop Iggy from spawning in on request
         private static void WorldLoader_GeneratePopulation(On.WorldLoader.orig_GeneratePopulation orig, WorldLoader self, bool fresh)
         {
-            if (!UsingCustomPlayer || CurrentPlayer.HasGuideOverseer)
+            if (!UsingCustomCharacter || CurrentCharacter.HasGuideOverseer)
             {
                 orig(self, fresh);
                 return;
@@ -122,14 +122,14 @@ namespace SlugBase
         private static void SaveState_ctor(On.SaveState.orig_ctor orig, SaveState self, int saveStateNumber, PlayerProgression progression)
         {
             orig(self, saveStateNumber, progression);
-            if (!(CurrentPlayer?.HasDreams ?? true))
+            if (!(CurrentCharacter?.HasDreams ?? true))
                 self.dreamsState = null;
         }
 
         // Disallow the guardian skip on request
         private static void TempleGuardAI_Update(On.TempleGuardAI.orig_Update orig, TempleGuardAI self)
         {
-            if(UsingCustomPlayer && !CurrentPlayer.CanSkipTempleGuards)
+            if(UsingCustomCharacter && !CurrentCharacter.CanSkipTempleGuards)
             {
                 self.tracker.SeeCreature(self.guard.room.game.Players[0]);
             }
@@ -139,14 +139,14 @@ namespace SlugBase
         // Change cycle length on request
         private static void RainCycle_ctor(On.RainCycle.orig_ctor orig, RainCycle self, World world, float minutes)
         {
-            orig(self, world, CurrentPlayer?.GetCycleLength() ?? minutes);
+            orig(self, world, CurrentCharacter?.GetCycleLength() ?? minutes);
         }
 
         // Unlock gates permanently on request
         private static void OverWorld_GateRequestsSwitchInitiation(On.OverWorld.orig_GateRequestsSwitchInitiation orig, OverWorld self, RegionGate reportBackToGate)
         {
             orig(self, reportBackToGate);
-            if (reportBackToGate != null && UsingCustomPlayer && CurrentPlayer.GatesPermanentlyUnlock)
+            if (reportBackToGate != null && UsingCustomCharacter && CurrentCharacter.GatesPermanentlyUnlock)
                 reportBackToGate.Unlock();
         }
 
@@ -154,7 +154,7 @@ namespace SlugBase
         // It's technically possible to change QuarterFood while the game is running
         private static void FoodMeter_Update(On.HUD.FoodMeter.orig_Update orig, HUD.FoodMeter self)
         {
-            if (self.quarterPipShower == null && UsingCustomPlayer && self.hud.owner is Player ply && ply.playerState.quarterFoodPoints > 0)
+            if (self.quarterPipShower == null && UsingCustomCharacter && self.hud.owner is Player ply && ply.playerState.quarterFoodPoints > 0)
                 self.quarterPipShower = new HUD.FoodMeter.QuarterPipShower(self);
             orig(self);
         }
@@ -178,9 +178,10 @@ namespace SlugBase
         {
             try
             {
-                giveQuarterFood = UsingCustomPlayer && CurrentPlayer.QuarterFood && !IsMeat(edible);
+                giveQuarterFood = UsingCustomCharacter && CurrentCharacter.QuarterFood && !IsMeat(edible);
                 orig(self, edible);
-            } finally
+            }
+            finally
             {
                 giveQuarterFood = false;
             }
@@ -200,13 +201,13 @@ namespace SlugBase
         private static bool lock_CanEatMeat = false;
         private static bool Player_CanEatMeat(On.Player.orig_CanEatMeat orig, Player self, Creature crit)
         {
-            if (lock_CanEatMeat || !UsingCustomPlayer) return orig(self, crit);
+            if (lock_CanEatMeat || !UsingCustomCharacter) return orig(self, crit);
 
             if (crit is IPlayerEdible || !crit.dead) return false;
             lock_CanEatMeat = true;
             try
             {
-                return CurrentPlayer.CanEatMeat(self, crit);
+                return CurrentCharacter.CanEatMeat(self, crit);
             }
             finally
             {
@@ -219,7 +220,7 @@ namespace SlugBase
         {
             if (lock_SlugcatFoodMeter) return orig(slugcatNum);
 
-            CustomPlayer ply = GetCustomPlayer(slugcatNum);
+            SlugBaseCharacter ply = GetCustomPlayer(slugcatNum);
             if(ply == null) return orig(slugcatNum);
 
             IntVector2 o = new IntVector2();
@@ -236,15 +237,14 @@ namespace SlugBase
             if (lock_SlugcatStatsCtor) return;
 
             lock_SlugcatStatsCtor = true;
-            CustomPlayer ply = GetCustomPlayer(slugcatNumber);
+            SlugBaseCharacter ply = GetCustomPlayer(slugcatNumber);
             ply?.GetStatsInternal(self);
             lock_SlugcatStatsCtor = false;
         }
 
         private static Color PlayerGraphics_SlugcatColor(On.PlayerGraphics.orig_SlugcatColor orig, int i)
         {
-            CustomPlayer ply = GetCustomPlayer(i);
-            return ply?.SlugcatColor() ?? orig(i);
+            return GetCustomPlayer(i)?.SlugcatColor() ?? orig(i);
         }
 
         // Enable a character as the game starts
@@ -285,27 +285,27 @@ namespace SlugBase
 
         internal static void StartGame(int slugcatNumber)
         {
-            CustomPlayer ply = GetCustomPlayer(slugcatNumber);
+            SlugBaseCharacter ply = GetCustomPlayer(slugcatNumber);
             if(ply != null)
             {
                 Debug.Log($"Started game as \"{ply.Name}\"");
-                CurrentPlayer = ply;
+                CurrentCharacter = ply;
                 ply.Enable();
             }
         }
 
-        internal static void StartGame(CustomPlayer customPlayer)
+        internal static void StartGame(SlugBaseCharacter customPlayer)
         {
             Debug.Log($"Started game as \"{customPlayer.Name}\"");
-            CurrentPlayer = customPlayer;
+            CurrentCharacter = customPlayer;
             customPlayer.Enable();
         }
 
         internal static void EndGame()
         {
-            if (CurrentPlayer != null)
-                Debug.Log($"Ended game as \"{CurrentPlayer.Name}\"");
-            CurrentPlayer?.Disable();
+            if (CurrentCharacter != null)
+                Debug.Log($"Ended game as \"{CurrentCharacter.Name}\"");
+            CurrentCharacter?.Disable();
         }
     }
 }

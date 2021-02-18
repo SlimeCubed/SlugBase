@@ -85,14 +85,14 @@ namespace SlugBase
         // Copy the creatures from another character
         private static void WorldLoader_ctor(On.WorldLoader.orig_ctor orig, WorldLoader self, RainWorldGame game, int playerCharacter, bool singleRoomWorld, string worldName, Region region, RainWorldGame.SetupValues setupValues)
         {
-            orig(self, game, PlayerManager.CurrentPlayer?.useSpawns ?? playerCharacter, singleRoomWorld, worldName, region, setupValues);
+            orig(self, game, PlayerManager.CurrentCharacter?.useSpawns ?? playerCharacter, singleRoomWorld, worldName, region, setupValues);
         }
 
         // RoomSettings
         private static void RoomSettings_ctor(On.RoomSettings.orig_ctor orig, RoomSettings self, string name, Region region, bool template, bool firstTemplate, int playerChar)
         {
             // Copy filters from another character
-            orig(self, name, region, template, firstTemplate, PlayerManager.CurrentPlayer?.useSpawns ?? playerChar);
+            orig(self, name, region, template, firstTemplate, PlayerManager.CurrentCharacter?.useSpawns ?? playerChar);
         }
 
         // CollectToken
@@ -100,8 +100,8 @@ namespace SlugBase
         {
             orig(self, s);
 
-            if(PlayerManager.UsingCustomPlayer)
-                self.availableToPlayers[PlayerManager.CurrentPlayer.slugcatIndex] = self.availableToPlayers[PlayerManager.CurrentPlayer.useSpawns];
+            if(PlayerManager.UsingCustomCharacter)
+                self.availableToPlayers[PlayerManager.CurrentCharacter.slugcatIndex] = self.availableToPlayers[PlayerManager.CurrentCharacter.useSpawns];
         }
 
         private static void CollectTokenData_ctor(On.CollectToken.CollectTokenData.orig_ctor orig, CollectToken.CollectTokenData self, PlacedObject owner, bool isBlue)
@@ -116,8 +116,8 @@ namespace SlugBase
         {
             orig(self, s);
 
-            if(PlayerManager.UsingCustomPlayer)
-                self.slugcats[PlayerManager.CurrentPlayer.slugcatIndex] = self.slugcats[PlayerManager.CurrentPlayer.useSpawns];
+            if(PlayerManager.UsingCustomCharacter)
+                self.slugcats[PlayerManager.CurrentCharacter.slugcatIndex] = self.slugcats[PlayerManager.CurrentCharacter.useSpawns];
         }
 
         private static void EventTrigger_ctor(On.EventTrigger.orig_ctor orig, EventTrigger self, EventTrigger.TriggerType type)
@@ -140,9 +140,9 @@ namespace SlugBase
 
         private static void ResizeToFitPlayer<T>(ref T[] array, T initValue)
         {
-            if (!PlayerManager.UsingCustomPlayer) return;
+            if (!PlayerManager.UsingCustomCharacter) return;
 
-            ResizeToFit(ref array, PlayerManager.CurrentPlayer.slugcatIndex + 1, initValue);
+            ResizeToFit(ref array, PlayerManager.CurrentCharacter.slugcatIndex + 1, initValue);
         }
     }
 }

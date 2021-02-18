@@ -47,7 +47,7 @@ namespace ExampleSlugcat
         }
     }
 
-    internal class SprinterSlugcat : CustomPlayer
+    internal class SprinterSlugcat : SlugBaseCharacter
     {
         public SprinterSlugcat() : base("Sprinter", PlayerFormatVersion.V1) { }
 

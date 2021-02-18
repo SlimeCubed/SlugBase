@@ -10,7 +10,7 @@ using JsonList = System.Collections.Generic.List<object>;
 namespace SlugBase
 {
     /// <summary>
-    /// Represents a scene added by a custom player.
+    /// Represents a scene added by a SlugBase character.
     /// </summary>
     public class CustomScene
     {
@@ -25,7 +25,7 @@ namespace SlugBase
         /// <summary>
         /// The character that this scene was loaded from.
         /// </summary>
-        public CustomPlayer Owner { get; private set; }
+        public SlugBaseCharacter Owner { get; private set; }
 
         /// <summary>
         /// This scene's name.
@@ -35,7 +35,7 @@ namespace SlugBase
         /// <summary>
         /// Creates an empty scene.
         /// </summary>
-        public CustomScene(CustomPlayer owner, string name)
+        public CustomScene(SlugBaseCharacter owner, string name)
         {
             Images = new List<SceneImage>();
             Owner = owner;
@@ -45,12 +45,12 @@ namespace SlugBase
         /// <summary>
         /// Creates a scene from a JSON string.
         /// </summary>
-        public CustomScene(CustomPlayer owner, string name, string json) : this(owner, name, json.dictionaryFromJson()) { }
+        public CustomScene(SlugBaseCharacter owner, string name, string json) : this(owner, name, json.dictionaryFromJson()) { }
 
         /// <summary>
         /// Creates a scene from a JSON object.
         /// </summary>
-        public CustomScene(CustomPlayer owner, string name, JsonObj data) : this(owner, name)
+        public CustomScene(SlugBaseCharacter owner, string name, JsonObj data) : this(owner, name)
         {
             foreach(var pair in data)
                 LoadValue(pair.Key, pair.Value);
@@ -185,7 +185,7 @@ namespace SlugBase
             return ToJsonObj().toJson();
         }
 
-        public void ApplyFilter(CustomSceneManager.SceneImageFilter filter)
+        public void ApplyFilter(SceneImageFilter filter)
         {
             foreach (var img in Images)
                 if (!filter(img))

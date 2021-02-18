@@ -11,13 +11,11 @@ using System.Text;
 
 namespace SlugBase
 {
-    using static CustomSceneManager;
-
     /// <summary>
-    /// The core of adding a custom slugcat to be added with <see cref="PlayerManager.RegisterPlayer(CustomPlayer)"/>.
+    /// The core of adding a custom character to be registered with <see cref="PlayerManager.RegisterPlayer(SlugBaseCharacter)"/>.
     /// You must derive a class from this to represent the character to add.
     /// </summary>
-    public abstract class CustomPlayer
+    public abstract class SlugBaseCharacter
     {
         internal int useSpawns;
         // Try not to use this for anything saved!
@@ -27,27 +25,27 @@ namespace SlugBase
         private bool devMode;
 
         /// <summary>
-        /// Create a new custom slugcat.
+        /// Create a new custom character.
         /// </summary>
-        /// <param name="name">The name of the custom slugcat, containing only alphanumericals, underscores, and spaces.</param>
+        /// <param name="name">The name of the custom character, containing only alphanumericals, underscores, and spaces.</param>
         /// <param name="useSpawns">
-        /// The slugcat to copy creatures and world state from.
+        /// The character to copy creatures and world state from.
         /// The value should be 0 (survivor), 1 (monk) or 2 (hunter).
         /// Values outside of this range are allowed, but the vanilla game's world files are not set up to use them correctly.
         /// </param>
         /// <remarks>
-        /// The name of this slugcat must be unique; other mods that add a slugcat of this same name will throw an exception
+        /// The name of this character must be unique; other mods that add a character of this same name will throw an exception
         /// when registering their character. If your name is likely to cause conflicts (such as any of the vanilla achievement
         /// names), then consider prefixing your player's name with some other text, like the author's name.
         /// </remarks>
         /// <exception cref="ArgumentNullException">Thrown when input name is null.</exception>
         /// <exception cref="ArgumentException">Thrown when input name is empty or contains illegal characters.</exception>
-        public CustomPlayer(string name, PlayerFormatVersion version, int useSpawns = 0)
+        public SlugBaseCharacter(string name, PlayerFormatVersion version, int useSpawns = 0)
         {
             Name = "NULL";
-            if (name == null) throw new ArgumentNullException("Slugcat name may not be null.", nameof(name));
-            if (name == "") throw new ArgumentException("Slugcat name may not be empty.", nameof(name));
-            if (!Regex.IsMatch(name, "^[\\w ]+$")) throw new ArgumentException("Slugcat name must contain only alphanumericals, underscores, and spaces.", nameof(name));
+            if (name == null) throw new ArgumentNullException("Name may not be null.", nameof(name));
+            if (name == "") throw new ArgumentException("Name may not be empty.", nameof(name));
+            if (!Regex.IsMatch(name, "^[\\w ]+$")) throw new ArgumentException("Name must contain only alphanumericals, underscores, and spaces.", nameof(name));
             Name = name;
 
             this.useSpawns = useSpawns;
@@ -60,11 +58,19 @@ namespace SlugBase
         public bool DevMode {
             get => devMode;
             set {
-                if (value) Debug.Log($"WARNING! Developer mode has been enabled for custom slugcat \"{Name}\"!");
+                if (value) Debug.Log($"WARNING! Developer mode has been enabled for SlugBase character \"{Name}\"!");
                 devMode = value;
             }
         }
 
+        /// <summary>
+        /// The slugcat index of this character.
+        /// </summary>
+        /// <remarks>
+        /// Use this value only when absolutely necessary.
+        /// This may be -1, even when in a story game, and may change each time the game is launched.
+        /// </remarks>
+        public int SlugcatIndex => slugcatIndex;
 
         //////////////
         // GAMEPLAY //
@@ -171,12 +177,12 @@ namespace SlugBase
         /////////////
 
         /// <summary>
-        /// The name of the custom slugcat.
+        /// The name of the character.
         /// </summary>
         public string Name { get; private set; }
 
         /// <summary>
-        /// Gets the default directory that contains resources for this slugcat.
+        /// Gets the default directory that contains resources for this character.
         /// </summary>
         protected internal string DefaultResourcePath => Path.Combine(PlayerManager.ResourceDirectory, Name);
 
@@ -184,19 +190,19 @@ namespace SlugBase
         /// The name to display to the user, such as on the player select screen.
         /// </summary>
         /// <remarks>
-        /// Defaults to your custom slugcat's internal name.
+        /// Defaults to your character's internal name.
         /// This should start with "The", and the first letter of each word should be capitalized.
         /// </remarks>
         public virtual string DisplayName => Name;
 
         /// <summary>
-        /// The description of this custom player to be displayed on the player select screen.
+        /// The description of this SlugBase character to be displayed on the player select screen.
         /// All instances of "&lt;LINE&gt;" will be replaced with a line break.
         /// </summary>
         public abstract string Description { get; }
 
         /// <summary>
-        /// Get the color used for this slugcat's UI and in-game sprites.
+        /// Get the color used for this character's UI and in-game sprites.
         /// </summary>
         /// <returns>The color to use, or null to use the default for this save slot.</returns>
         public virtual Color? SlugcatColor() => null;

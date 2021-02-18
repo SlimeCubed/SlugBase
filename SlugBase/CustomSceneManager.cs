@@ -9,10 +9,7 @@ using RWCustom;
 
 namespace SlugBase
 {
-    /// <summary>
-    /// Allows custom slugcats to add 
-    /// </summary>
-    public static class CustomSceneManager
+    internal static class CustomSceneManager
     {
         // Passed in as a folder to some functions to mark that they should load a custom resource instead
         internal const string resourceFolderName = "SlugBase Resources";
@@ -21,16 +18,6 @@ namespace SlugBase
         private static CustomSlideshow slideshowOverride;
 
         internal static AttachedField<MenuIllustration, SceneImage> customRep = new AttachedField<MenuIllustration, SceneImage>();
-
-        /// <summary>
-        /// Determines if this image should be included in the scene.
-        /// </summary>
-        /// <remarks>
-        /// This is intended to filter items based on <see cref="SceneImage.GetProperty{T}(string)"/>.
-        /// </remarks>
-        /// <param name="image">The <see cref="SceneImage"/> instance to check.</param>
-        /// <returns>True if this image should be in the scene, false otherwise.</returns>
-        public delegate bool SceneImageFilter(SceneImage image);
 
         internal static void ApplyHooks()
         {
@@ -64,7 +51,7 @@ namespace SlugBase
             if (!self.restartChecked && self.manager.rainWorld.progression.IsThereASavedGame(storyGameCharacter)) return;
 
             // Only continue to the slideshow if this character has an intro slideshow
-            CustomPlayer ply = PlayerManager.GetCustomPlayer(storyGameCharacter);
+            SlugBaseCharacter ply = PlayerManager.GetCustomPlayer(storyGameCharacter);
             if (ply == null) return;
             if(ply.HasSlideshow("Intro") && !Input.GetKey("s"))
             {
@@ -81,9 +68,9 @@ namespace SlugBase
         // Same as below, but for slideshows
         private static void SlideShow_ctor(On.Menu.SlideShow.orig_ctor orig, SlideShow self, ProcessManager manager, SlideShow.SlideShowID slideShowID)
         {
-            // Automatically override slideshows if the current custom player has a slideshow by the same name
-            CustomPlayer currentPlayer;
-            if (PlayerManager.UsingCustomPlayer) currentPlayer = PlayerManager.CurrentPlayer;
+            // Automatically override slideshows if the current character has a slideshow by the same name
+            SlugBaseCharacter currentPlayer;
+            if (PlayerManager.UsingCustomCharacter) currentPlayer = PlayerManager.CurrentCharacter;
             else
             {
                 int index;
@@ -119,7 +106,7 @@ namespace SlugBase
 
             // Load a custom scene
 
-            CustomPlayer owner = slideshowOverride.Owner;
+            SlugBaseCharacter owner = slideshowOverride.Owner;
             List<SlideshowSlide> slides = slideshowOverride.Slides;
 
             // Chose a destination process
@@ -206,7 +193,7 @@ namespace SlugBase
             self.NextScene();
         }
 
-        // Add custom slugcat resources as a "virtual file" that illustrations may be read from
+        // Add SlugBase character resources as a "virtual file" that illustrations may be read from
         // Folder: "SlugBase Resources"
         // File: "PlayerName\Dir1\Dir2\...\DirN\Image.png"
         private static void MenuIllustration_LoadFile_1(On.Menu.MenuIllustration.orig_LoadFile_1 orig, Menu.MenuIllustration self, string folder)
@@ -229,9 +216,9 @@ namespace SlugBase
 
         private static void MenuScene_BuildScene(On.Menu.MenuScene.orig_BuildScene orig, MenuScene self)
         {
-            // Automatically override scenes if the current custom player has a scene by the same name
-            CustomPlayer currentPlayer;
-            if (PlayerManager.UsingCustomPlayer) currentPlayer = PlayerManager.CurrentPlayer;
+            // Automatically override scenes if the current character has a scene by the same name
+            SlugBaseCharacter currentPlayer;
+            if (PlayerManager.UsingCustomCharacter) currentPlayer = PlayerManager.CurrentCharacter;
             else
             {
                 int index;
@@ -366,7 +353,7 @@ namespace SlugBase
 
         #endregion Hooks
 
-        internal static CustomScene OverrideNextScene(CustomPlayer ply, string customSceneName, SceneImageFilter filter = null)
+        internal static CustomScene OverrideNextScene(SlugBaseCharacter ply, string customSceneName, SceneImageFilter filter = null)
         {
             sceneOverride = ply.BuildScene(customSceneName);
             if (filter != null)
@@ -379,7 +366,7 @@ namespace SlugBase
             sceneOverride = null;
         }
 
-        internal static CustomSlideshow OverrideNextSlideshow(CustomPlayer ply, string customSlideshowName)
+        internal static CustomSlideshow OverrideNextSlideshow(SlugBaseCharacter ply, string customSlideshowName)
         {
             slideshowOverride = ply.BuildSlideshow(customSlideshowName);
             return slideshowOverride;
@@ -394,7 +381,7 @@ namespace SlugBase
         {
             string[] args = fileName.Split('\\');
             if (args.Length < 2) return null;
-            CustomPlayer ply = PlayerManager.GetCustomPlayer(args[0]);
+            SlugBaseCharacter ply = PlayerManager.GetCustomPlayer(args[0]);
             if (ply == null) return null;
 
             string[] resourcePath = new string[args.Length - 1];
@@ -408,7 +395,7 @@ namespace SlugBase
 
                 if (imageData == null)
                 {
-                    Debug.LogException(new FileNotFoundException($"Could not find image for custom player: \"{ply.Name}:{string.Join("\\", resourcePath)}\"."));
+                    Debug.LogException(new FileNotFoundException($"Could not find image for SlugBase character: \"{ply.Name}:{string.Join("\\", resourcePath)}\"."));
                     return null;
                 }
 
@@ -424,4 +411,14 @@ namespace SlugBase
             return tex;
         }
     }
+
+    /// <summary>
+    /// Determines if this image should be included in the scene.
+    /// </summary>
+    /// <remarks>
+    /// This is intended to filter items based on <see cref="SceneImage.GetProperty{T}(string)"/>.
+    /// </remarks>
+    /// <param name="image">The <see cref="SceneImage"/> instance to check.</param>
+    /// <returns>True if this image should be in the scene, false otherwise.</returns>
+    public delegate bool SceneImageFilter(SceneImage image);
 }

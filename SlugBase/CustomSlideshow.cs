@@ -10,11 +10,11 @@ namespace SlugBase
     using static CustomScene;
 
     /// <summary>
-    /// Represents a slideshow added by a custom player.
+    /// Represents a slideshow added by a SlugBase character.
     /// </summary>
     public class CustomSlideshow
     {
-        public CustomPlayer Owner { get; private set; }
+        public SlugBaseCharacter Owner { get; private set; }
 
         public string Name { get; private set; }
 
@@ -37,7 +37,7 @@ namespace SlugBase
         /// </summary>
         /// <param name="owner"></param>
         /// <param name="name"></param>
-        public CustomSlideshow(CustomPlayer owner, string name)
+        public CustomSlideshow(SlugBaseCharacter owner, string name)
         {
             NextProcess = null;
             Owner = owner;
@@ -48,12 +48,12 @@ namespace SlugBase
         /// <summary>
         /// Creates a slideshow from a JSON string.
         /// </summary>
-        public CustomSlideshow(CustomPlayer owner, string name, string json) : this(owner, name, json.dictionaryFromJson()) { }
+        public CustomSlideshow(SlugBaseCharacter owner, string name, string json) : this(owner, name, json.dictionaryFromJson()) { }
 
         /// <summary>
         /// Creates a slideshow from a JSON object.
         /// </summary>
-        public CustomSlideshow(CustomPlayer owner, string name, JsonObj data) : this(owner, name)
+        public CustomSlideshow(SlugBaseCharacter owner, string name, JsonObj data) : this(owner, name)
         {
             foreach(var pair in data)
                 LoadValue(pair.Key, pair.Value);

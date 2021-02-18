@@ -11,17 +11,17 @@ using System.Text.RegularExpressions;
 
 namespace SlugBase
 {
-    // Whenever save data would be read from the progression file, check if it would be for a custom slugcat
+    // Whenever save data would be read from the progression file, check if it would be for a SlugBase character
     // If it is, then search for save data elsewhere
 
     // The data saved for each character is the same as would be stored for the "SAVE STATE" key
     // "SAV STATE NUMBER" should be omitted, since it may change for slugbase characters
 
     /// <summary>
-    /// Manages save data for custom players.
+    /// Manages save data for SlugBase characters.
     /// </summary>
     /// <remarks>
-    /// Custom player save data is saved to separate files.
+    /// Save data for different SlugBase characters is saved to separate files.
     /// This ensures that one character's save game will never be played by another character
     /// and that, after uninstalling SlugBase, the vanilla game will not try to load modded saves.
     /// </remarks>
@@ -51,7 +51,7 @@ namespace SlugBase
         private static void PlayerProgression_WipeSaveState(On.PlayerProgression.orig_WipeSaveState orig, PlayerProgression self, int saveStateNumber)
         {
             orig(self, saveStateNumber);
-            CustomPlayer ply = PlayerManager.GetCustomPlayer(saveStateNumber);
+            SlugBaseCharacter ply = PlayerManager.GetCustomPlayer(saveStateNumber);
             if (ply != null)
             {
                 File.Delete(GetSaveFilePath(ply.Name, self.rainWorld.options.saveSlot));
@@ -61,7 +61,7 @@ namespace SlugBase
         // Read the shelter name from a separate file
         private static string PlayerProgression_ShelterOfSaveGame(On.PlayerProgression.orig_ShelterOfSaveGame orig, PlayerProgression self, int saveStateNumber)
         {
-            CustomPlayer ply = PlayerManager.GetCustomPlayer(saveStateNumber);
+            SlugBaseCharacter ply = PlayerManager.GetCustomPlayer(saveStateNumber);
             if (ply == null)
                 return orig(self, saveStateNumber);
 
@@ -106,7 +106,7 @@ namespace SlugBase
         private static void PlayerProgression_SaveDeathPersistentDataOfCurrentState(On.PlayerProgression.orig_SaveDeathPersistentDataOfCurrentState orig, PlayerProgression self, bool saveAsIfPlayerDied, bool saveAsIfPlayerQuit)
         {
             int slot = self.rainWorld.options.saveSlot;
-            CustomPlayer ply = null;
+            SlugBaseCharacter ply = null;
             if (self.currentSaveState != null) ply = PlayerManager.GetCustomPlayer(self.currentSaveState.saveStateNumber);
             if (ply == null || !(self.currentSaveState is CustomSaveState css))
             {
@@ -163,7 +163,7 @@ namespace SlugBase
         private static SaveState PlayerProgression_GetOrInitiateSaveState(On.PlayerProgression.orig_GetOrInitiateSaveState orig, PlayerProgression self, int saveStateNumber, RainWorldGame game, ProcessManager.MenuSetup setup, bool saveAsDeathOrQuit)
         {
             int slot = self.rainWorld.options.saveSlot;
-            CustomPlayer ply = PlayerManager.GetCustomPlayer(saveStateNumber);
+            SlugBaseCharacter ply = PlayerManager.GetCustomPlayer(saveStateNumber);
 
             if (ply == null)
                 return orig(self, saveStateNumber, game, setup, saveAsDeathOrQuit);
@@ -218,7 +218,7 @@ namespace SlugBase
 
         private static bool PlayerProgression_IsThereASavedGame(On.PlayerProgression.orig_IsThereASavedGame orig, PlayerProgression self, int saveStateNumber)
         {
-            CustomPlayer ply = PlayerManager.GetCustomPlayer(saveStateNumber);
+            SlugBaseCharacter ply = PlayerManager.GetCustomPlayer(saveStateNumber);
             if (ply != null)
                 return HasCustomSaveData(ply.Name, self.rainWorld.options.saveSlot);
             return orig(self, saveStateNumber);

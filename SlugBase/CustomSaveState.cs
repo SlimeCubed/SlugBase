@@ -15,7 +15,7 @@ namespace SlugBase
     {
         private static bool appliedHooks = false;
 
-        public CustomSaveState(PlayerProgression progression, CustomPlayer character) : base(character.slugcatIndex, progression)
+        public CustomSaveState(PlayerProgression progression, SlugBaseCharacter character) : base(character.slugcatIndex, progression)
         {
             Character = character;
 
@@ -26,9 +26,9 @@ namespace SlugBase
         }
 
         /// <summary>
-        /// The <see cref="CustomPlayer"/> that owns this save state.
+        /// The <see cref="SlugBaseCharacter"/> that owns this save state.
         /// </summary>
-        public CustomPlayer Character { get; private set; }
+        public SlugBaseCharacter Character { get; private set; }
 
         /// <summary>
         /// Converts save data for this character to strings to enter into a dictionary.

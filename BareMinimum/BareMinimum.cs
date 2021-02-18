@@ -26,7 +26,7 @@ namespace BareMinimum
         }
     }
 
-    public class BareMinimumSlugcat : CustomPlayer
+    public class BareMinimumSlugcat : SlugBaseCharacter
     {
         public BareMinimumSlugcat() : base("Bare Minimum", PlayerFormatVersion.V1, 0)
         {

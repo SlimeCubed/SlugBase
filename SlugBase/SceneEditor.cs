@@ -67,7 +67,7 @@ namespace SlugBase
             {
                 if (self.sceneFolder == resourceFolderName && Input.GetKeyDown(KeyCode.RightBracket))
                 {
-                    CustomPlayer ply = null;
+                    SlugBaseCharacter ply = null;
                     foreach(MenuObject subObj in self.subObjects)
                     {
                         if(subObj is MenuIllustration illust)

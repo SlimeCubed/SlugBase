@@ -42,7 +42,7 @@ namespace SlugBase
         // ... in another thread, the join it in Enable
         private static void SlugcatSelectMenu_StartGame(On.Menu.SlugcatSelectMenu.orig_StartGame orig, SlugcatSelectMenu self, int storyGameCharacter)
         {
-            CustomPlayer ply = PlayerManager.GetCustomPlayer(storyGameCharacter);
+            SlugBaseCharacter ply = PlayerManager.GetCustomPlayer(storyGameCharacter);
             if(ply != null)
                 ply.Prepare();
             orig(self, storyGameCharacter);
@@ -84,7 +84,7 @@ namespace SlugBase
         // If the indicated slugcat is added by slugbase, instead mine from the custom save file
         private static SlugcatSelectMenu.SaveGameData SlugcatSelectMenu_MineForSaveData(On.Menu.SlugcatSelectMenu.orig_MineForSaveData orig, ProcessManager manager, int slugcat)
         {
-            CustomPlayer ply = PlayerManager.GetCustomPlayer(slugcat);
+            SlugBaseCharacter ply = PlayerManager.GetCustomPlayer(slugcat);
             if(ply != null)
             {
                 SaveState save = manager.rainWorld.progression.currentSaveState;
@@ -115,17 +115,17 @@ namespace SlugBase
         private static void SlugcatPage_ctor(On.Menu.SlugcatSelectMenu.SlugcatPage.orig_ctor orig, SlugcatSelectMenu.SlugcatPage self, Menu.Menu menu, MenuObject owner, int pageIndex, int slugcatNumber)
         {
             orig(self, menu, owner, pageIndex, slugcatNumber);
-            CustomPlayer ply = PlayerManager.GetCustomPlayer(pageIndex);
+            SlugBaseCharacter ply = PlayerManager.GetCustomPlayer(pageIndex);
             if (ply != null) {
                 self.colorName = ply.Name;
                 self.effectColor = ply.SlugcatColor() ?? Color.white;
             }
         }
 
-        // Override select scenes for custom slugcats
+        // Override select scenes for SlugBase characters
         private static void SlugcatPage_AddImage(On.Menu.SlugcatSelectMenu.SlugcatPage.orig_AddImage orig, SlugcatSelectMenu.SlugcatPage self, bool ascended)
         {
-            CustomPlayer ply = PlayerManager.GetCustomPlayer(self.slugcatNumber);
+            SlugBaseCharacter ply = PlayerManager.GetCustomPlayer(self.slugcatNumber);
             
             // Do not modify scenes for any non-SlugBase slugcats
             if(ply == null)
@@ -208,10 +208,10 @@ namespace SlugBase
 
             orig(self, manager);
 
-            List<CustomPlayer> plys = PlayerManager.customPlayers;
+            List<SlugBaseCharacter> plys = PlayerManager.customPlayers;
             int origLength = self.slugcatColorOrder.Length;
 
-            // Add all custom players to the select screen
+            // Add all SlugBase characters to the select screen
             // All other player mods should change this array, so we have a nice lower bound for indices we can take
 
             // Find the next available slugcat index, skipping Nightcat
@@ -227,7 +227,7 @@ namespace SlugBase
 
             int nextCustomIndex = firstCustomIndex;
 
-            // Add custom slugcats to the page order and assign empty slots a default value
+            // Add SlugBase characters to the page order and assign empty slots a default value
             Array.Resize(ref self.slugcatColorOrder, origLength + plys.Count);
             for(int i = origLength; i < self.slugcatColorOrder.Length; i++)
                 self.slugcatColorOrder[i] = -1;
@@ -280,7 +280,7 @@ namespace SlugBase
         {
             orig(self, menu, owner, pageIndex, slugcatNumber);
 
-            CustomPlayer ply = PlayerManager.GetCustomPlayer(slugcatNumber);
+            SlugBaseCharacter ply = PlayerManager.GetCustomPlayer(slugcatNumber);
             if(ply != null)
             {
                 self.difficultyLabel.text = ply.DisplayName.ToUpper();

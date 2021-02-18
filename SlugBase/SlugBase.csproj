@@ -61,7 +61,7 @@
   <ItemGroup>
     <Compile Include="ArenaAdditions.cs" />
     <Compile Include="AttachedField.cs" />
-    <Compile Include="CustomPlayer.cs" />
+    <Compile Include="SlugBaseCharacter.cs" />
     <Compile Include="CustomSaveState.cs" />
     <Compile Include="CustomScene.cs" />
     <Compile Include="CustomSlideshow.cs" />

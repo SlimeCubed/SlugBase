@@ -107,7 +107,7 @@ namespace SlugBase
                 }
 
                 // SlugBase slugcats
-                foreach(CustomPlayer player in PlayerManager.customPlayers)
+                foreach(SlugBaseCharacter player in PlayerManager.customPlayers)
                 {
                     buttons.Add(new PlayerButton(this, new PlayerDescriptor(player), new Vector2()));
                 }
@@ -293,9 +293,9 @@ namespace SlugBase
                 public readonly Type type;
                 public readonly string name;
                 public readonly int index;
-                public readonly CustomPlayer player;
+                public readonly SlugBaseCharacter player;
 
-                public PlayerDescriptor(CustomPlayer customPlayer)
+                public PlayerDescriptor(SlugBaseCharacter customPlayer)
                 {
                     type = Type.SlugBase;
                     name = customPlayer.DisplayName;
@@ -363,7 +363,7 @@ namespace SlugBase
                                 return new PlayerDescriptor((int)Custom.ParseEnum<SlugcatStats.Name>(input.Substring(typeSplit + 1)));
                             case Type.SlugBase:
                                 {
-                                    CustomPlayer ply = PlayerManager.GetCustomPlayer(input.Substring(typeSplit + 1));
+                                    SlugBaseCharacter ply = PlayerManager.GetCustomPlayer(input.Substring(typeSplit + 1));
                                     if (ply == null) return new PlayerDescriptor(0);
                                     return new PlayerDescriptor(ply);
                                 }
