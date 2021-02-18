@@ -253,9 +253,6 @@ namespace SlugBase
             {
                 try
                 {
-                    if (self is InteractiveMenuScene ims)
-                        ims.idleDepths = new List<float>();
-
                     self.sceneFolder = resourceFolderName;
 
                     // Check for flatmode support
@@ -270,9 +267,9 @@ namespace SlugBase
                     }
 
                     // Load all images into the scene
-                    for (int i = 0; i < sceneOverride.Images.Count; i++)
+                    for (int imgIndex = 0; imgIndex < sceneOverride.Images.Count; imgIndex++)
                     {
-                        var img = sceneOverride.Images[i];
+                        var img = sceneOverride.Images[imgIndex];
 
                         // Hide disabled images
                         if (!img.Enabled) continue;
@@ -321,7 +318,7 @@ namespace SlugBase
                                     menuShader = Custom.ParseEnum<MenuDepthIllustration.MenuShader>(shaderName);
                                     shader = null;
                                 }
-                                catch (Exception)
+                                catch
                                 {
                                     if (!self.menu.manager.rainWorld.Shaders.TryGetValue(shaderName, out shader)) shader = null;
                                     menuShader = MenuDepthIllustration.MenuShader.Normal;
@@ -333,10 +330,21 @@ namespace SlugBase
 
                             // Apply crisp pixels
                             if (crisp) illust.sprite.element.atlas.texture.filterMode = FilterMode.Point;
-                            // Add idle depth
-                            if (self is InteractiveMenuScene && img.HasTag("FOCUS")) (self as InteractiveMenuScene).idleDepths.Add(img.Depth - 0.1f);
                         }
 
+                        // Add idle depths
+                        if(self is InteractiveMenuScene ims)
+                        {
+                            ims.idleDepths = new List<float>();
+                            List<object> depths = sceneOverride.GetProperty<List<object>>("idledepths");
+                            if(depths != null)
+                            {
+                                for (int i = 0; i < depths.Count; i++) {
+                                    if (depths[i] is double depth)
+                                        ims.idleDepths.Add((float)depth);
+                                }
+                            }
+                        }
 
                         // Apply tags
                         if (shader != null) illust.sprite.shader = shader;

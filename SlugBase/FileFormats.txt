@@ -1,11 +1,17 @@
 ﻿
+ -- Resources --
+
+All mods can load their resources from a different location.
+By default they read from "[Rain World]\Mods\SlugBase\[SlugcatName]".
+
+
  -- Scene Format --
 
 Each custom scene has its own folder in "[Resources]\Scenes".
 Inside of a scene's folder, there must be a file named "scene.json" that describes how the scene's images are laid out. This file must contain a Scene Object.
 
 Custom scenes with the same name as a vanilla scene (e.g. "SleepScreen") will override that scene when the character is enabled.
-In addition, the "SelectMenu" scene will appear on the slugcat select menu before starting a game.
+In addition, the "SelectMenu" scene will appear on the slugcat select menu before starting a game. The "SelectMenuAscended" scene will replace the select scene if the slugcat has ascended.
 Any scene may be overridden by calling CustomPlayer.OverrideNextScene before the scene is constructed.
 
 Keys preceeded by ? are optional. They may be accessed through the GetProperty method.
@@ -18,12 +24,19 @@ Scene Object:
 		...
 	],
 
+	?"idledepths": [
+		<number: A depth that the camera can focus on>,
+		...
+	]
+
 	?"markx": <number: The x position of the mark of communication on the slugcat select screen>,
 	?"marky": <number: The y position of the mark of communication on the slugcat select screen>,
 	?"glowx": <number: The x position of the neuron glow on the slugcat select screen>,
 	?"glowy": <number: The y position of the neuron glow on the slugcat select screen>,
 	?"slugcatdepth": <number: The depth of the slugcat on the select screen, used for positioning the mark and glow>
 }
+
+If "idledpeths" is unspecified, then the depth of each image in the scene will be used.
 
 Image Object:
 {
@@ -34,7 +47,6 @@ Image Object:
 
     ?"alpha": <number: This image's opacity from 0 to 1>,
     ?"crisp": <bool: True to disable antialiasing for this image>,
-    ?"focus": <bool: True to mark that this image as a candidate for camera focus>,
     ?"flatmode": <bool: True if this image should only appear in flat mode, and others should be hidden>,
     ?"shader": <string: The name of the shader to use for this image>,
 
@@ -52,7 +64,6 @@ Image Object:
 The "name" tag should be the name of an image asset in the same folder as "scene.json", including the file extension.
 Setting a "depth" value of less than zero makes the image flat.
 Tagging "flatmode" on one image will hide all that do have the tag, if the user is using flatmode. It should be used in conjunction with a "depth" value of less than zero.
-If no images are tagged as "focus", each image will act like it has the tag, so the camera can focus its depth-of-field effect on each.
 The "crisp" tag is ignored for images with a "depth" value of less than zero.
 The "shader" value is first checked against the Menu.MenuDepthIllustration.MenuShader enum. If the image is flat, or no MenuShader exists with that name, then it is checked against all shaders.
 The "alphakeys" value is used only for slideshows. It is made up of pairs of times and alpha values. The image will linearly interpolate between keyframes.
