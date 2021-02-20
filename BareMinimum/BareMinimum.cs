@@ -1,5 +1,4 @@
-﻿using Partiality.Modloader;
-using SlugBase;
+﻿using SlugBase;
 
 /*
  * This example interacts with SlugBase as little as possible.
@@ -11,7 +10,7 @@ using SlugBase;
 
 namespace BareMinimum
 {
-    public class BareMinimum : PartialityMod
+    public class BareMinimum : Partiality.Modloader.PartialityMod
     {
         public BareMinimum()
         {

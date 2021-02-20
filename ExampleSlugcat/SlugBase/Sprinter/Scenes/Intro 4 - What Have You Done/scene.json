@@ -1,0 +1,8 @@
+{
+	"images": [
+		{"name":"Cell Wall.png", "x":270, "y":119, "depth":4.0},
+		{"name":"Floor.png", "x":64, "y":98, "depth":3.0},
+		{"name":"Slug.png", "x":618, "y":177, "depth":2.5, "alphakeys":[ 0.35,0.0, 0.375,1.0 ]},
+		{"name":"Pipe.png", "x":557, "y":531, "depth":2.5}
+	]
+}

@@ -1,0 +1,8 @@
+{
+	"images": [
+		{"name":"Cell Wall.png", "x":306, "y":47, "depth":4.5},
+		{"name":"List.png", "x":619, "y":215, "depth":3.0, "shader":"Lighten"},
+		{"name":"Pebbles.png", "x":396, "y":186, "depth":2.0},
+		{"name":"Arm.png", "x":53, "y":80, "depth":1.5}
+	]
+}

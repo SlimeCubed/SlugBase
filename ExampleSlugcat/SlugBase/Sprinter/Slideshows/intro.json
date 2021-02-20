@@ -1,0 +1,12 @@
+{
+	"slides": [
+		{"name":"Empty", "duration":1.0},
+		{"name":"Intro 1 - Pebbles Thinking"  , "duration":7.0, "campath":[-300,0,0, 300,0,0 ]},
+		{"name":"Intro 2 - Critter List"      , "duration":7.0, "campath":[-400,0,0, 200,0,0.2, 200,300,0.4]},
+		{"name":"Intro 3 - Wait No"           , "duration":7.0, "campath":[0,200,0.5, 0,0,0]},
+		{"name":"Intro 4 - What Have You Done", "duration":6.0, "campath":[0,400,0, 0,-400,0]},
+		{"name":"Intro 5 - It's Alive!"       , "duration":7.0},
+		{"name":"Empty", "duration":0.0}
+	],
+	"music":"RW_Intro_Theme",
+}

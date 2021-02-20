@@ -1,0 +1,6 @@
+{
+	"images": [
+		{"name":"Ground.png", "x":0, "y":114, "depth":-1},
+		{"name":"Slug Up.png", "x":385, "y":191, "depth":-1, "alphakeys":[ 0.5,0.0, 0.525,1.0 ]}
+	]
+}

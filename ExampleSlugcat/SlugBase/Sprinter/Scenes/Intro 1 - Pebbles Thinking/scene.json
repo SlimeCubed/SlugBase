@@ -1,0 +1,7 @@
+{
+	"images": [
+		{"name":"Pebbles.png", "x":339, "y":7, "depth":3.0},
+		{"name":"Hand.png", "x":498, "y":6, "depth":2.25, "shader":"LightEdges"},
+		{"name":"Blue Light.png", "x":454, "y":0, "depth":1.0, "alpha":0.5, "shader":"Lighten"}
+	]
+}
