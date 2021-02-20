@@ -39,23 +39,23 @@ namespace SlugBase
         /// <summary>
         /// Registers a new character to appear in the select menu.
         /// </summary>
-        /// <param name="newPlayer">The player to register.</param>
+        /// <param name="newCharacter">The character to register.</param>
         /// <exception cref="ArgumentException">Thrown when a SlugBase character with this name already exists.</exception>
         /// <exception cref="InvalidOperationException">Thrown when a SlugBase character is registered after the game has started.</exception>
-        public static void RegisterPlayer(SlugBaseCharacter newPlayer)
+        public static void RegisterCharacter(SlugBaseCharacter newCharacter)
         {
-            if (customPlayersByName.ContainsKey(newPlayer.Name)) throw new ArgumentException("A character with the same name already exists!");
+            if (customPlayersByName.ContainsKey(newCharacter.Name)) throw new ArgumentException("A character with the same name already exists!");
 
-            customPlayersByName[newPlayer.Name] = newPlayer;
-            Debug.Log($"Registered SlugBase character: \"{newPlayer.Name}\"");
+            customPlayersByName[newCharacter.Name] = newCharacter;
+            Debug.Log($"Registered SlugBase character: \"{newCharacter.Name}\"");
 
             // Insert the new player into the list in alphabetical order
             int i;
             for (i = 0; i < customPlayers.Count; i++)
             {
-                if (string.Compare(newPlayer.Name, customPlayers[i].Name, StringComparison.InvariantCultureIgnoreCase) >= 0) break;
+                if (string.Compare(newCharacter.Name, customPlayers[i].Name, StringComparison.InvariantCultureIgnoreCase) >= 0) break;
             }
-            customPlayers.Insert(i, newPlayer);
+            customPlayers.Insert(i, newCharacter);
         }
 
         /// <summary>

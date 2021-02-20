@@ -12,7 +12,7 @@ using System.Text;
 namespace SlugBase
 {
     /// <summary>
-    /// The core of adding a custom character to be registered with <see cref="PlayerManager.RegisterPlayer(SlugBaseCharacter)"/>.
+    /// The core of adding a custom character to be registered with <see cref="PlayerManager.RegisterCharacter(SlugBaseCharacter)"/>.
     /// You must derive a class from this to represent the character to add.
     /// </summary>
     public abstract class SlugBaseCharacter
@@ -21,7 +21,7 @@ namespace SlugBase
         // Try not to use this for anything saved!
         // This is for situations where an index is expected by the vanilla game or other mods
         internal int slugcatIndex = -1;
-        internal PlayerFormatVersion version;
+        internal FormatVersion version;
         private bool devMode;
 
         /// <summary>
@@ -41,7 +41,7 @@ namespace SlugBase
         /// </remarks>
         /// <exception cref="ArgumentNullException">Thrown when input name is null.</exception>
         /// <exception cref="ArgumentException">Thrown when input name is empty or contains illegal characters.</exception>
-        public SlugBaseCharacter(string name, PlayerFormatVersion version, int useSpawns = 0)
+        public SlugBaseCharacter(string name, FormatVersion version, int useSpawns = 0)
         {
             Name = "NULL";
             if (name == null) throw new ArgumentNullException("Name may not be null.", nameof(name));
@@ -173,6 +173,18 @@ namespace SlugBase
         /// </summary>
         public virtual bool CanSkipTempleGuards => true;
 
+        /// <summary>
+        /// True if the tutorial overseer follows this character.
+        /// Defaults to true.
+        /// </summary>
+        public virtual bool HasGuideOverseer => true;
+
+        /// <summary>
+        /// True if dreams can play when this character is selected.
+        /// Defaults to false.
+        /// </summary>
+        public virtual bool HasDreams => false;
+
         /////////////
         // DISPLAY //
         /////////////
@@ -181,11 +193,6 @@ namespace SlugBase
         /// The name of the character.
         /// </summary>
         public string Name { get; private set; }
-
-        /// <summary>
-        /// Gets the default directory that contains resources for this character.
-        /// </summary>
-        protected internal string DefaultResourcePath => Path.Combine(PlayerManager.ResourceDirectory, Name);
 
         /// <summary>
         /// The name to display to the user, such as on the player select screen.
@@ -225,6 +232,11 @@ namespace SlugBase
         //////////////////////////
         // SCENES AND RESOURCES //
         //////////////////////////
+
+        /// <summary>
+        /// Gets the default directory that contains resources for this character.
+        /// </summary>
+        protected internal string DefaultResourcePath => Path.Combine(PlayerManager.ResourceDirectory, Name);
 
         /// <summary>
         /// Gets a stream containing the specified resource.
@@ -317,7 +329,7 @@ namespace SlugBase
         /// </summary>
         /// <param name="sceneName">The name of the scene to check for.</param>
         /// <returns>True if the scene exists, false if it does not.</returns>
-        public bool HasScene(string sceneName)
+        public virtual bool HasScene(string sceneName)
         {
             if (!DevMode && hasSceneCache.TryGetValue(sceneName, out bool hasScene)) return hasScene;
             using (Stream res = GetResource("Scenes", sceneName, "scene.json"))
@@ -335,7 +347,7 @@ namespace SlugBase
         /// </summary>
         /// <param name="slideshowName">The name of the slideshow to check for.</param>
         /// <returns>True if the slideshow exists, false if it does not.</returns>
-        public bool HasSlideshow(string slideshowName)
+        public virtual bool HasSlideshow(string slideshowName)
         {
             if (!DevMode && hasSlideshowCache.TryGetValue(slideshowName, out bool hasSlideshow)) return hasSlideshow;
             using (Stream res = GetResource("Slideshows", $"{slideshowName}.json"))
@@ -366,18 +378,6 @@ namespace SlugBase
             CustomSceneManager.ClearSceneOverride();
         }
 
-        /// <summary>
-        /// True if dreams can play when this character is selected.
-        /// Defaults to false.
-        /// </summary>
-        public virtual bool HasDreams => false;
-
-        /// <summary>
-        /// True if the tutorial overseer follows this character.
-        /// Defaults to true.
-        /// </summary>
-        public virtual bool HasGuideOverseer => true;
-
         /////////////////////////////
         // BACKWARDS COMPATIBILITY //
         /////////////////////////////
@@ -389,7 +389,7 @@ namespace SlugBase
         /// This is intended to help preserve backwards compatibility, should any otherwise breaking changes apply to new versions.
         /// When first creating a mod, you should always use the most recent version.
         /// </remarks>
-        public enum PlayerFormatVersion
+        public enum FormatVersion
         {
             /// <summary>
             /// The current version. Use this one.

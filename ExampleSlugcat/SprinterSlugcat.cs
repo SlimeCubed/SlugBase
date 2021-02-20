@@ -19,7 +19,7 @@ namespace ExampleSlugcat
             On.Room.Loaded += Room_Loaded;
             On.Player.Jump += Player_Jump;
 
-            PlayerManager.RegisterPlayer(new SprinterSlugcat());
+            PlayerManager.RegisterCharacter(new SprinterSlugcat());
         }
 
         private void Room_Loaded(On.Room.orig_Loaded orig, Room self)
@@ -49,7 +49,7 @@ namespace ExampleSlugcat
 
     internal class SprinterSlugcat : SlugBaseCharacter
     {
-        public SprinterSlugcat() : base("Sprinter", PlayerFormatVersion.V1) { }
+        public SprinterSlugcat() : base("Sprinter", FormatVersion.V1) { }
 
         protected override void Enable() => ExampleSlugcatMod.enabled = true;
 

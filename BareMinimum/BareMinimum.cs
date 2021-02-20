@@ -22,13 +22,13 @@ namespace BareMinimum
 
         public override void OnLoad()
         {
-            PlayerManager.RegisterPlayer(new BareMinimumSlugcat());
+            PlayerManager.RegisterCharacter(new BareMinimumSlugcat());
         }
     }
 
     public class BareMinimumSlugcat : SlugBaseCharacter
     {
-        public BareMinimumSlugcat() : base("Bare Minimum", PlayerFormatVersion.V1, 0)
+        public BareMinimumSlugcat() : base("Bare Minimum", FormatVersion.V1, 0)
         {
         }
 
