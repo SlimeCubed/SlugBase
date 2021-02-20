@@ -6,4 +6,4 @@ Downloads can be found in the [Releases](https://github.com/SlimeCubed/SlugBase/
 SlugBase is a Partiality mod, so it may be applied with any mod loader that supports Partiality mods. This includes BepInEx.
 
 ## For Developers
-See the [Developer Guide]().
+See the [Developer Guide](https://github.com/SlimeCubed/SlugBase/wiki/Developer-Guide).
