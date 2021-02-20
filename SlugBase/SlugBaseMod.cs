@@ -8,7 +8,7 @@ namespace SlugBase
 {
     internal class SlugBaseMod : PartialityMod
     {
-        public const string version = "0.1";
+        public const string version = "0.1.0";
 
         public SlugBaseMod()
         {
