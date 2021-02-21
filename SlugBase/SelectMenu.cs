@@ -169,7 +169,7 @@ namespace SlugBase
 
             // Taken from SlugcatPage.AddImage
             self.imagePos = new Vector2(683f, 484f);
-            self.sceneOffset = new Vector2(-10f, 100f);
+            self.sceneOffset = new Vector2(0f, 0f);
 
             // Load a custom character's select screen from resources
             CustomScene scene = OverrideNextScene(ply, sceneName, img =>
