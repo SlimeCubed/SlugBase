@@ -171,6 +171,7 @@ namespace SlugBase
             self.imagePos = new Vector2(683f, 484f);
             self.sceneOffset = new Vector2(0f, 0f);
 
+
             // Load a custom character's select screen from resources
             CustomScene scene = OverrideNextScene(ply, sceneName, img =>
             {
@@ -178,6 +179,11 @@ namespace SlugBase
                 if (img.HasTag("GLOW") && !self.HasGlow) return false;
                 return true;
             });
+
+            // Parse selectmenux and selectmenuy
+            self.sceneOffset.x = scene.GetProperty<float?>("selectmenux") ?? 0f;
+            self.sceneOffset.y = scene.GetProperty<float?>("selectmenuy") ?? 0f;
+            Debug.Log($"Scene offset for {ply.Name}: {self.sceneOffset}");
 
             // Slugcat depth, used for positioning the glow and mark
             self.slugcatDepth = scene.GetProperty<float?>("slugcatdepth") ?? 3f;

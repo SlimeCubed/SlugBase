@@ -10,5 +10,7 @@
 	"glowx":730,
 	"glowy":335,
 	"markx":740,
-	"marky":575
+	"marky":575,
+	"selectmenux":-10,
+	"selectmenuy":100
 }

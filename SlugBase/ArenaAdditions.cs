@@ -82,7 +82,8 @@ namespace SlugBase
         {
             orig(self, manager);
 
-            self.pages[0].subObjects.Add(new PlayerSelector(self, self.pages[0], new Vector2(703f, 441f)));
+            // Place relative to the first join button
+            self.pages[0].subObjects.Add(new PlayerSelector(self, self.pages[0], self.playerJoinButtons[0].pos + new Vector2(703f - 706f, 441f - 480f)));
         }
 
         // The list of selector icons
