@@ -7,14 +7,16 @@ using UnityEngine;
 
 namespace SlugBase
 {
-    // Adds a selector to the multiplayer menus
-    internal static class ArenaAdditions
+    /// <summary>
+    /// Controls added arena mode settings and functionality.
+    /// </summary>
+    public static class ArenaAdditions
     {
-        internal static AttachedField<ArenaSetup, PlayerSelector.PlayerDescriptor> arenaCharacter = new AttachedField<ArenaSetup, PlayerSelector.PlayerDescriptor>();
+        internal static AttachedField<ArenaSetup, PlayerDescriptor> arenaCharacter = new AttachedField<ArenaSetup, PlayerDescriptor>();
 
         private static string arenaSettingsPath;
 
-        public static void ApplyHooks()
+        internal static void ApplyHooks()
         {
             On.Menu.MultiplayerMenu.Singal += MultiplayerMenu_Singal;
             On.ArenaSetup.SaveToFile += ArenaSetup_SaveToFile;
@@ -25,12 +27,25 @@ namespace SlugBase
             arenaSettingsPath = Path.Combine(SaveManager.GetSaveFileDirectory(), "arenaSetup.txt");
         }
 
+        /// <summary>
+        /// Gets the currently selected arena character.
+        /// </summary>
+        /// <param name="setup">The <see cref="ArenaSetup"/> that this selection is associated with.</param>
+        /// <returns>A representation of the selected arena character.</returns>
+        public static PlayerDescriptor GetSelectedArenaCharacter(ArenaSetup setup)
+        {
+            if (setup == null) return new PlayerDescriptor(0);
+            return arenaCharacter.TryGet(setup, out PlayerDescriptor ret) ? ret : new PlayerDescriptor(0);
+        }
+
+        #region Hooks
+
         private static void MultiplayerMenu_Singal(On.Menu.MultiplayerMenu.orig_Singal orig, MultiplayerMenu self, MenuObject sender, string message)
         {
             orig(self, sender, message);
             if(self.manager.upcomingProcess == ProcessManager.ProcessID.Game && arenaCharacter.TryGet(self.GetArenaSetup, out var ply))
             {
-                if(ply.type == PlayerSelector.PlayerDescriptor.Type.SlugBase)
+                if(ply.type == PlayerDescriptor.Type.SlugBase)
                     ply.player.Prepare();
             }
         }
@@ -49,7 +64,7 @@ namespace SlugBase
             orig(self);
             try
             {
-                arenaCharacter[self] = PlayerSelector.PlayerDescriptor.FromString(File.ReadAllText(arenaSettingsPath));
+                arenaCharacter[self] = PlayerDescriptor.FromString(File.ReadAllText(arenaSettingsPath));
             } catch(Exception e)
             {
                 Debug.LogException(new FormatException("Invalid arena settings format. This error is not fatal.", e));
@@ -66,10 +81,10 @@ namespace SlugBase
             {
                 switch (ply.type)
                 {
-                    case PlayerSelector.PlayerDescriptor.Type.SlugBase:
+                    case PlayerDescriptor.Type.SlugBase:
                         ply.player.GetStatsInternal(self.characterStats);
                         break;
-                    case PlayerSelector.PlayerDescriptor.Type.Vanilla:
+                    case PlayerDescriptor.Type.Vanilla:
                         if (ply.index != 0)
                             self.characterStats = new SlugcatStats(ply.index, false);
                         break;
@@ -85,6 +100,8 @@ namespace SlugBase
             // Place relative to the first join button
             self.pages[0].subObjects.Add(new PlayerSelector(self, self.pages[0], self.playerJoinButtons[0].pos + new Vector2(703f - 706f, 441f - 480f)));
         }
+
+        #endregion Hooks
 
         // The list of selector icons
         internal class PlayerSelector : RectangularMenuObject
@@ -284,121 +301,178 @@ namespace SlugBase
                     name.y = drawPos.y + height / 2f + 0.1f;
                 }
             }
+        }
 
-            // Describes a player
-            // Indices won't be assigned yet, so just an int isn't enough
-            internal class PlayerDescriptor
+        // Indices won't be assigned yet, so just an int isn't enough
+        /// <summary>
+        /// Represents a Rain World character.
+        /// </summary>
+        public class PlayerDescriptor
+        {
+            /// <summary>
+            /// The way a character was added to the game.
+            /// </summary>
+            public enum Type : byte {
+                /// <summary>
+                /// The character is either a vanilla character, or was added by mods other than SlugBase.
+                /// </summary>
+                Vanilla,
+                /// <summary>
+                /// The character was added by SlugBase.
+                /// </summary>
+                SlugBase
+            }
+
+            /// <summary>
+            /// The way this character was added to the game.
+            /// </summary>
+            public readonly Type type;
+            /// <summary>
+            /// This character's name.
+            /// </summary>
+            public readonly string name;
+            /// <summary>
+            /// This character's slugcat index, or -1 if it was added by SlugBase.
+            /// </summary>
+            public readonly int index;
+            /// <summary>
+            /// The SlugBase character this represents, or null if it was not added by SlugBase.
+            /// </summary>
+            public readonly SlugBaseCharacter player;
+
+            /// <summary>
+            /// Creates a representation of a SlugBase character.
+            /// </summary>
+            /// <param name="customPlayer">The character to represent.</param>
+            public PlayerDescriptor(SlugBaseCharacter customPlayer)
             {
-                public enum Type : byte { Vanilla, SlugBase }
+                type = Type.SlugBase;
+                name = customPlayer.DisplayName;
+                player = customPlayer;
+                index = -1;
+            }
 
-                public readonly Type type;
-                public readonly string name;
-                public readonly int index;
-                public readonly SlugBaseCharacter player;
-
-                public PlayerDescriptor(SlugBaseCharacter customPlayer)
+            /// <summary>
+            /// Creates a representation of a vanilla character, or a character added by a mod other than SlugBase.
+            /// </summary>
+            /// <param name="slugcatIndex">The slugcat index of the character to represent.</param>
+            public PlayerDescriptor(int slugcatIndex)
+            {
+                type = Type.Vanilla;
+                name = ((SlugcatStats.Name)slugcatIndex).ToString();
+                switch (name)
                 {
-                    type = Type.SlugBase;
-                    name = customPlayer.DisplayName;
-                    player = customPlayer;
-                    index = -1;
+                    case "White": name = "The Survivor"; break;
+                    case "Yellow": name = "The Monk"; break;
+                    case "Red": name = "The Hunter"; break;
                 }
+                index = slugcatIndex;
+            }
 
-                public PlayerDescriptor(int slugcatIndex)
+            /// <summary>
+            /// The color of this character, as gotten with <see cref="PlayerGraphics.SlugcatColor(int)"/>.
+            /// </summary>
+            public Color Color
+            {
+                get
                 {
-                    type = Type.Vanilla;
-                    name = ((SlugcatStats.Name)slugcatIndex).ToString();
-                    switch(name)
-                    {
-                        case "White":  name = "The Survivor"; break;
-                        case "Yellow": name = "The Monk";     break;
-                        case "Red":    name = "The Hunter";   break;
-                    }
-                    index = slugcatIndex;
-                }
-
-                public Color Color
-                { 
-                    get
-                    {
-                        switch(type)
-                        {
-                            case Type.SlugBase:
-                                return player.SlugcatColor() ?? PlayerGraphics.SlugcatColor(0);
-                            case Type.Vanilla:
-                            default:
-                                return PlayerGraphics.SlugcatColor(index);
-                        }
-                    }
-                }
-
-                public override string ToString()
-                {
-                    string o = type.ToString();
-                    o += "-";
                     switch (type)
                     {
                         case Type.SlugBase:
-                            o += player.Name;
-                            break;
+                            return player.SlugcatColor() ?? PlayerGraphics.SlugcatColor(0);
                         case Type.Vanilla:
-                            o += Enum.GetName(typeof(SlugcatStats.Name), (SlugcatStats.Name)index);
-                            break;
+                        default:
+                            return PlayerGraphics.SlugcatColor(index);
                     }
-                    return o;
                 }
+            }
 
-                public static PlayerDescriptor FromString(string input)
+            /// <summary>
+            /// Saves this player representation to a string.
+            /// SlugBase characters will be saved as their names, vanilla characters
+            /// will be saved as their name according to <see cref="SlugcatStats.Name"/>.
+            /// </summary>
+            /// <returns>A string representation of this character.</returns>
+            public override string ToString()
+            {
+                string o = type.ToString();
+                o += "-";
+                switch (type)
                 {
-                    try
-                    {
-                        // Find type
-                        int typeSplit = input.IndexOf('-');
-                        if (typeSplit == -1) return new PlayerDescriptor(0);
-                        Type t = Custom.ParseEnum<Type>(input.Substring(0, typeSplit));
-                        
-                        // Fill data
-                        switch(t)
-                        {
-                            case Type.Vanilla:
-                                return new PlayerDescriptor((int)Custom.ParseEnum<SlugcatStats.Name>(input.Substring(typeSplit + 1)));
-                            case Type.SlugBase:
-                                {
-                                    SlugBaseCharacter ply = PlayerManager.GetCustomPlayer(input.Substring(typeSplit + 1));
-                                    if (ply == null) return new PlayerDescriptor(0);
-                                    return new PlayerDescriptor(ply);
-                                }
-                            default:
-                                return new PlayerDescriptor(0);
-                        }
-                    } catch(Exception e)
-                    {
-                        Debug.LogException(new ArgumentException("Failed to parse input. This error is not fatal.", e));
-                        return new PlayerDescriptor(0);
-                    }
+                    case Type.SlugBase:
+                        o += player.Name;
+                        break;
+                    case Type.Vanilla:
+                        o += Enum.GetName(typeof(SlugcatStats.Name), (SlugcatStats.Name)index);
+                        break;
                 }
+                return o;
+            }
 
-                public override int GetHashCode()
+            /// <summary>
+            /// 
+            /// </summary>
+            /// <param name="input"></param>
+            /// <returns></returns>
+            public static PlayerDescriptor FromString(string input)
+            {
+                try
                 {
-                    switch(type)
-                    {
-                        case Type.Vanilla: return index.GetHashCode();
-                        case Type.SlugBase: return player.GetHashCode();
-                        default: return base.GetHashCode();
-                    }
-                }
+                    // Find type
+                    int typeSplit = input.IndexOf('-');
+                    if (typeSplit == -1) return new PlayerDescriptor(0);
+                    Type t = Custom.ParseEnum<Type>(input.Substring(0, typeSplit));
 
-                public override bool Equals(object obj)
-                {
-                    if (!(obj is PlayerDescriptor otherDesc)) return false;
-                    if (otherDesc.type != type) return false;
-                    switch (type)
+                    // Fill data
+                    switch (t)
                     {
-                        case Type.Vanilla: return otherDesc.index == index;
-                        case Type.SlugBase: return otherDesc.player == player;
+                        case Type.Vanilla:
+                            return new PlayerDescriptor((int)Custom.ParseEnum<SlugcatStats.Name>(input.Substring(typeSplit + 1)));
+                        case Type.SlugBase:
+                            {
+                                SlugBaseCharacter ply = PlayerManager.GetCustomPlayer(input.Substring(typeSplit + 1));
+                                if (ply == null) return new PlayerDescriptor(0);
+                                return new PlayerDescriptor(ply);
+                            }
+                        default:
+                            return new PlayerDescriptor(0);
                     }
-                    return base.Equals(obj);
                 }
+                catch (Exception e)
+                {
+                    throw new ArgumentException("Failed to parse character descriptor string.", nameof(input), e);
+                }
+            }
+
+            /// <summary>
+            /// Gets a hash code for this character.
+            /// </summary>
+            /// <returns>A hash code representing this character.</returns>
+            public override int GetHashCode()
+            {
+                switch (type)
+                {
+                    case Type.Vanilla: return index.GetHashCode();
+                    case Type.SlugBase: return player.GetHashCode();
+                    default: return base.GetHashCode();
+                }
+            }
+
+            /// <summary>
+            /// Tests whether this represents the same character as another object.
+            /// </summary>
+            /// <param name="obj">The <see cref="PlayerDescriptor"/> to compare to.</param>
+            /// <returns>True if this and <paramref name="obj"/> represent the same character.</returns>
+            public override bool Equals(object obj)
+            {
+                if (!(obj is PlayerDescriptor otherDesc)) return false;
+                if (otherDesc.type != type) return false;
+                switch (type)
+                {
+                    case Type.Vanilla: return otherDesc.index == index;
+                    case Type.SlugBase: return otherDesc.player == player;
+                }
+                return base.Equals(obj);
             }
         }
     }

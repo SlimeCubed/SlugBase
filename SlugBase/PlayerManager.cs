@@ -263,10 +263,10 @@ namespace SlugBase
                 {
                     switch (ply.type)
                     {
-                        case ArenaAdditions.PlayerSelector.PlayerDescriptor.Type.SlugBase:
+                        case ArenaAdditions.PlayerDescriptor.Type.SlugBase:
                             StartGame(ply.player);
                             break;
-                        case ArenaAdditions.PlayerSelector.PlayerDescriptor.Type.Vanilla:
+                        case ArenaAdditions.PlayerDescriptor.Type.Vanilla:
                         default:
                             StartGame(0);
                             break;
