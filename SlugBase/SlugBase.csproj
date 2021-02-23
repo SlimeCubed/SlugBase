@@ -76,10 +76,6 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="PlayerManager.cs" />
   </ItemGroup>
-  <ItemGroup>
-    <Content Include="DeveloperGuide.txt" />
-    <Content Include="FileFormats.txt" />
-  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
     <PostBuildEvent>if defined RWMods (copy /Y "$(TargetPath)" "%25RWMods%25")</PostBuildEvent>
