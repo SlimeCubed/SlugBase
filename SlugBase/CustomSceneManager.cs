@@ -388,6 +388,9 @@ namespace SlugBase
             for (int i = 0; i < resourcePath.Length; i++)
                 resourcePath[i] = args[i + 1];
 
+            if (resourcePath.Length > 0)
+                resourcePath[resourcePath.Length - 1] = Path.ChangeExtension(resourcePath[resourcePath.Length - 1], "png");
+
             // Load the image resource from disk
             Texture2D tex = new Texture2D(1, 1);
             using (Stream imageData = ply.GetResource(resourcePath))
