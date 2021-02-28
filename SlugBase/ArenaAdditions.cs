@@ -98,7 +98,7 @@ namespace SlugBase
             orig(self, manager);
 
             // Place relative to the first join button
-            self.pages[0].subObjects.Add(new PlayerSelector(self, self.pages[0], self.playerJoinButtons[0].pos + new Vector2(703f - 706f, 441f - 480f)));
+            self.pages[0].subObjects.Add(new PlayerSelector(self, self.pages[0], self.playerJoinButtons[0].pos + new Vector2(-1f, -40f)));
         }
 
         #endregion Hooks
@@ -108,24 +108,29 @@ namespace SlugBase
         {
             private const float spacing = 3f;
             private const float height = 31f;
-            private const float width = 460f;
+            private const float width = 432f;
+            private const float arrowWidth = height;
 
-            public float scroll;
-            public float scrollTarget;
             public List<PlayerButton> buttons;
+            public readonly bool hasArrows = false;
+            public ArrowButton[] arrows;
+
+            private float viewWidth;
+            private int currentPage;
+            private IntVector2[] pages;
 
             public PlayerSelector(Menu.Menu menu, MenuObject owner, Vector2 pos) : base(menu, owner, pos, new Vector2(0f, 0f))
             {
                 buttons = new List<PlayerButton>();
 
                 // Non-SlugBase slugcats
-                foreach(SlugcatStats.Name name in Enum.GetValues(typeof(SlugcatStats.Name)))
+                foreach (SlugcatStats.Name name in Enum.GetValues(typeof(SlugcatStats.Name)))
                 {
                     buttons.Add(new PlayerButton(this, new PlayerDescriptor((int)name), new Vector2()));
                 }
 
                 // SlugBase slugcats
-                foreach(SlugBaseCharacter player in PlayerManager.customPlayers)
+                foreach (SlugBaseCharacter player in PlayerManager.customPlayers)
                 {
                     buttons.Add(new PlayerButton(this, new PlayerDescriptor(player), new Vector2()));
                 }
@@ -133,43 +138,111 @@ namespace SlugBase
                 foreach (PlayerButton button in buttons)
                     subObjects.Add(button);
 
+                // Determine whether or not to have arrows
+                float maxWidth;
+                {
+                    float maxButtonWidth = 0f;
+                    for(int i = 0; i < buttons.Count; i++)
+                    {
+                        if (buttons[i].MaxWidth > maxButtonWidth)
+                            maxButtonWidth = buttons[i].MaxWidth;
+                    }
+                    maxWidth = maxButtonWidth + (height + spacing) * (buttons.Count - 1);
+                }
+
+                if (maxWidth > width + 2f)
+                    hasArrows = true;
+
+                // Create the arrows
+                if (hasArrows)
+                {
+                    arrows = new ArrowButton[2];
+                    arrows[0] = new ArrowButton(this, false, new Vector2(0f, 0f));
+                    arrows[1] = new ArrowButton(this, true, new Vector2(width - arrowWidth, 0f));
+
+                    foreach (ArrowButton arrow in arrows)
+                        subObjects.Add(arrow);
+
+                    viewWidth = width - (arrowWidth + spacing) * 2f;
+                }
+                else
+                {
+                    arrows = new ArrowButton[0];
+                    viewWidth = width;
+                }
+
+                // Create pages
+                pages = GetPages();
+                for (int pg = 0; pg < pages.Length; pg++) TogglePage(pg, false);
+
                 // Select one of the buttons to start with
                 if (arenaCharacter.TryGet(menu.manager.arenaSetup, out var ply))
                 {
+                    // Load from a saved value
                     for (int i = 0; i < buttons.Count; i++)
                     {
                         if (buttons[i].player.Equals(ply))
                         {
+                            for(int pg = pages.Length - 1; pg >= 0; pg--)
+                            {
+                                if (pg == 0 || (pages[pg].x <= i && pages[pg].y > i))
+                                    TogglePage(pg, true);
+                            }
+
                             buttons[i].SetSelected(true);
                             break;
                         }
                     }
-                } else
+                }
+                else
                 {
+                    // Default to the Survivor
                     arenaCharacter[menu.manager.arenaSetup] = new PlayerDescriptor(0);
                     buttons[0].SetSelected(true);
+                    TogglePage(0, true);
                 }
+            }
+
+            private IntVector2[] GetPages()
+            {
+                List<IntVector2> pageList = new List<IntVector2>();
+                int i = 0;
+                int pageStart = 0;
+                while (i < buttons.Count)
+                {
+                    float pageWidth = 0f;
+                    float maxButtonWidth = 0f;
+
+                    // Find the maximum number of buttons that will fit on this page
+                    while (pageWidth + maxButtonWidth < viewWidth && i < buttons.Count)
+                    {
+                        maxButtonWidth = Mathf.Max(maxButtonWidth, buttons[i].MaxWidth);
+                        pageWidth += height + spacing;
+                        i++;
+                    }
+
+                    // Add the page
+                    pageList.Add(new IntVector2(pageStart, i));
+                    pageStart = i;
+                }
+
+                return pageList.ToArray();
             }
 
             public override void Update()
             {
                 base.Update();
 
-                scroll = Custom.LerpAndTick(scroll, scrollTarget, 0.2f, 1f);
-                scrollTarget = Mathf.Max(scrollTarget, 0f);
-                scroll = Mathf.Max(scroll, 0f);
+                float pos;
+                if (hasArrows) pos = arrowWidth + spacing;
+                else pos = 0f;
 
-                float pos = -scroll;
-                for(int i = 0; i < buttons.Count; i++)
+                IntVector2 range = pages[currentPage];
+
+                // Move all buttons
+                for(int i = range.x; i < range.y; i++)
                 {
                     buttons[i].Move(pos);
-                    if(buttons[i].playerSelected)
-                    {
-                        // Keep the selected button from going off of the right side of the selector
-                        scrollTarget = -Mathf.Max(-scrollTarget, pos + buttons[i].size.x - width);
-                        // ... and the left side too
-                        scrollTarget = -Mathf.Min(-scrollTarget, pos);
-                    }
                     pos += buttons[i].size.x + spacing;
                 }
             }
@@ -187,6 +260,85 @@ namespace SlugBase
                 }
             }
 
+            private void ChangePage(int newPage)
+            {
+                if (newPage < 0 || newPage >= pages.Length)
+                    return;
+
+                TogglePage(currentPage, false);
+                currentPage = newPage;
+                TogglePage(currentPage, true);
+            }
+
+            private void TogglePage(int page, bool show)
+            {
+                IntVector2 range = pages[page];
+                for(int i = range.x; i < range.y; i++)
+                {
+                    PlayerButton btn = buttons[i];
+                    if (show)
+                        btn.Show();
+                    else
+                        btn.Hide();
+                }
+            }
+
+            internal class ArrowButton : ButtonTemplate
+            {
+                public bool right;
+
+                private RoundedRect back;
+                private FSprite arrow;
+
+                private PlayerSelector Selector => (PlayerSelector)owner;
+
+                public ArrowButton(PlayerSelector owner, bool right, Vector2 pos) : base(owner.menu, owner, pos, new Vector2(arrowWidth, height))
+                {
+                    this.right = right;
+
+                    back = new RoundedRect(menu, this, new Vector2(), size, true);
+                    back.addSize = new Vector2(-2f, -2f);
+                    subObjects.Add(back);
+
+                    arrow = new FSprite("ShortcutArrow") { anchorX = 0.5f, anchorY = 0.5f };
+                    arrow.rotation = right ? 90f : -90f;
+                    Futile.stage.AddChild(arrow);
+                }
+
+                public override void GrafUpdate(float timeStacker)
+                {
+                    base.GrafUpdate(timeStacker);
+
+                    arrow.SetPosition(DrawPos(timeStacker) + DrawSize(timeStacker) / 2f);
+                    arrow.color = buttonBehav.greyedOut ? Color.gray : Color.white;
+                }
+
+                public override void Update()
+                {
+                    int targetPage = Selector.currentPage + (right ? 1 : -1);
+
+                    buttonBehav.greyedOut = targetPage < 0 ||
+                                            targetPage >= Selector.pages.Length;
+
+                    base.Update();
+                }
+
+                public override void RemoveSprites()
+                {
+                    base.RemoveSprites();
+
+                    arrow.RemoveFromContainer();
+                }
+
+                public override void Clicked()
+                {
+                    base.Clicked();
+                    menu.PlaySound(SoundID.MENU_Checkbox_Check);
+
+                    Selector.ChangePage(Selector.currentPage + (right ? 1 : -1));
+                }
+            }
+
             // A selector icon
             internal class PlayerButton : ButtonTemplate
             {
@@ -196,9 +348,25 @@ namespace SlugBase
                 private RoundedRect back;
                 private CreatureSymbol icon;
                 private FLabel name;
+                private float nameAlpha;
+                private float lastNameAlpha;
                 private bool snap;
 
                 private PlayerSelector Selector => (PlayerSelector)owner;
+
+                public override bool CurrentlySelectableNonMouse => CurrentlySelectableMouse;
+
+                public int Priority
+                {
+                    get
+                    {
+                        if (Selected) return 2;
+                        if (playerSelected) return 1;
+                        return 0;
+                    }
+                }
+
+                public float MaxWidth => height + 15f + name.textRect.width;
 
                 public PlayerButton(PlayerSelector owner, PlayerDescriptor player, Vector2 pos) : base(owner.menu, owner, pos, new Vector2(height, height))
                 {
@@ -252,6 +420,8 @@ namespace SlugBase
                     base.Update();
                     icon.Update();
 
+                    lastNameAlpha = nameAlpha;
+
                     //if (Selected && !playerSelected)
                     //{
                     //    Selector.CloseAll();
@@ -275,20 +445,38 @@ namespace SlugBase
                     back.addSize.y = back.addSize.x;
 
                     // Update name alpha
-                    float nameAlpha = name.alpha;
                     if (playerSelected && Mathf.Abs(size.x - targetWidth) <= 7f)
-                        nameAlpha = Custom.LerpAndTick(nameAlpha, 1, 0.25f, 0.1f);
+                        nameAlpha = Custom.LerpAndTick(nameAlpha, 1f, 0.25f, 0.1f);
                     else
                         nameAlpha = 0f;
-
-                    if (name.alpha != nameAlpha) name.alpha = nameAlpha;
 
                     back.size = size;
                 }
 
                 public void Move(float offset)
                 {
-                    pos = new Vector2(offset, 0f);
+                    pos.Set(offset, 0f);
+                    if (snap) lastPos = pos;
+                }
+
+                public void Hide()
+                {
+                    buttonBehav.greyedOut = true;
+                    icon.symbolSprite.isVisible = false;
+                    name.isVisible = false;
+                    foreach (FSprite sprite in back.sprites)
+                        sprite.isVisible = false;
+                }
+
+                public void Show()
+                {
+                    buttonBehav.greyedOut = false;
+                    icon.symbolSprite.isVisible = true;
+                    name.isVisible = true;
+                    foreach (FSprite sprite in back.sprites)
+                        sprite.isVisible = true;
+                    lastPos = pos;
+                    snap = true;
                 }
 
                 public override void GrafUpdate(float timeStacker)
@@ -299,6 +487,10 @@ namespace SlugBase
                     icon.Draw(timeStacker, drawPos + new Vector2(height, height) / 2f);
                     name.x = drawPos.x + height + 5f + 0.1f;
                     name.y = drawPos.y + height / 2f + 0.1f;
+
+                    // Name alpha
+                    float drawNameAlpha = Mathf.Lerp(lastNameAlpha, nameAlpha, timeStacker);
+                    if (name.alpha != drawNameAlpha) name.alpha = drawNameAlpha;
                 }
             }
         }
