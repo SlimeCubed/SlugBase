@@ -215,6 +215,12 @@ namespace SlugBase
         /// <returns>The color to use, or null to use the default for this save slot.</returns>
         public virtual Color? SlugcatColor() => null;
 
+        /// <summary>
+        /// Gets the colors of this character's eyes.
+        /// </summary>
+        /// <returns>The color to use, or null to use the default for this save slot.</returns>
+        public virtual Color? SlugcatEyeColor() => null;
+
         ///////////
         // SAVES //
         ///////////

@@ -99,11 +99,11 @@ namespace SlugBase
             On.Player.CanEatMeat += Player_CanEatMeat;
             On.SlugcatStats.SlugcatFoodMeter += SlugcatStats_SlugcatFoodMeter;
             On.SlugcatStats.ctor += SlugcatStats_ctor;
+            On.PlayerGraphics.ApplyPalette += PlayerGraphics_ApplyPalette;
             On.PlayerGraphics.SlugcatColor += PlayerGraphics_SlugcatColor;
             On.RainWorldGame.ctor += RainWorldGame_ctor;
             On.RainWorldGame.ShutDownProcess += RainWorldGame_ShutDownProcess;
         }
-
 
         #region HOOKS
 
@@ -218,6 +218,7 @@ namespace SlugBase
             }
         }
 
+        // Change food requirements on request
         private static bool lock_SlugcatFoodMeter = false;
         private static IntVector2 SlugcatStats_SlugcatFoodMeter(On.SlugcatStats.orig_SlugcatFoodMeter orig, int slugcatNum)
         {
@@ -233,6 +234,7 @@ namespace SlugBase
             return o;
         }
 
+        // Change stats on request
         private static bool lock_SlugcatStatsCtor = false;
         private static void SlugcatStats_ctor(On.SlugcatStats.orig_ctor orig, SlugcatStats self, int slugcatNumber, bool malnourished)
         {
@@ -245,6 +247,19 @@ namespace SlugBase
             lock_SlugcatStatsCtor = false;
         }
 
+        // Change eye color on request
+        private static void PlayerGraphics_ApplyPalette(On.PlayerGraphics.orig_ApplyPalette orig, PlayerGraphics self, RoomCamera.SpriteLeaser sLeaser, RoomCamera rCam, RoomPalette palette)
+        {
+            orig(self, sLeaser, rCam, palette);
+
+            Color? eyeColor = GetCustomPlayer(self.player.playerState.slugcatCharacter)?.SlugcatEyeColor();
+            if (eyeColor.HasValue && sLeaser.sprites.Length > 9)
+            {
+                sLeaser.sprites[9].color = eyeColor.Value;
+            }
+        }
+
+        // Change player color on request
         private static Color PlayerGraphics_SlugcatColor(On.PlayerGraphics.orig_SlugcatColor orig, int i)
         {
             return GetCustomPlayer(i)?.SlugcatColor() ?? orig(i);

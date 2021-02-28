@@ -38,7 +38,6 @@ namespace SlugBase
             /*
              * TODO:
              * 
-             * Change eye color
              * Scene editor (maybe)
              * 
              */
