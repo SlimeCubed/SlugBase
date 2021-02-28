@@ -41,15 +41,6 @@ namespace SlugBase
              * Scene editor (maybe)
              * 
              */
-
-            /*
-             * To test:
-             * 
-             * Cycle time config
-             * Toggle for if you can flarebomb skip
-             * 
-             */
-
         }
 
         public override void OnLoad()
