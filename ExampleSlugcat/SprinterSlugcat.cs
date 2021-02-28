@@ -15,8 +15,6 @@ namespace ExampleSlugcat
     // This does not have to be a PartialityMod
     internal class ExampleSlugcatMod : Partiality.Modloader.PartialityMod
     {
-        public static bool enabled = false;
-
         public ExampleSlugcatMod()
         {
             ModID = "Example Slugcat";
@@ -26,34 +24,7 @@ namespace ExampleSlugcat
 
         public override void OnEnable()
         {
-            On.Room.Loaded += Room_Loaded;
-            On.Player.Jump += Player_Jump;
-
             PlayerManager.RegisterCharacter(new SprinterSlugcat());
-        }
-
-        private void Room_Loaded(On.Room.orig_Loaded orig, Room self)
-        {
-            bool firstTimeRealized = self.abstractRoom.firstTimeRealized;
-            orig(self);
-
-            if (self.game == null) return;
-
-            // Make sure this is the right room
-            if (!enabled) return;
-            if (!self.game.IsStorySession) return;
-            if (!firstTimeRealized) return;
-            if (self.abstractRoom.name != SprinterSlugcat.startRoom) return;
-            if (self.game.GetStorySession.saveState.denPosition != SprinterSlugcat.startRoom) return;
-
-            self.AddObject(new SprinterStart(self));
-        }
-
-        private static void Player_Jump(On.Player.orig_Jump orig, Player self)
-        {
-            orig(self);
-            if (enabled)
-                self.jumpBoost += 3f;
         }
     }
     
@@ -62,16 +33,54 @@ namespace ExampleSlugcat
     {
         public SprinterSlugcat() : base("Sprinter", FormatVersion.V1) { }
 
-        protected override void Enable() => ExampleSlugcatMod.enabled = true;
+        // Custom //
 
-        protected override void Disable() => ExampleSlugcatMod.enabled = false;
+        protected override void Enable()
+        {
+            // Hooks are applied here
+            On.Room.Loaded += Room_Loaded;
+            On.Player.Jump += Player_Jump;
+        }
+
+        protected override void Disable()
+        {
+            // Hooks are disposed of here
+            On.Room.Loaded -= Room_Loaded;
+            On.Player.Jump -= Player_Jump;
+        }
+
+        // Play a short "cutscene", forcing the player to climb a pole when starting a new game
+        private void Room_Loaded(On.Room.orig_Loaded orig, Room self)
+        {
+            bool firstTimeRealized = self.abstractRoom.firstTimeRealized;
+            orig(self);
+
+            if (self.game == null) return;
+
+            // Make sure this is the right room
+            if (!self.game.IsStorySession) return;
+            if (!firstTimeRealized) return;
+            if (self.abstractRoom.name != StartRoom) return;
+            if (self.game.GetStorySession.saveState.denPosition != StartRoom) return;
+
+            self.AddObject(new SprinterStart(self));
+        }
+
+        // Add more height to all standard jumps
+        private static void Player_Jump(On.Player.orig_Jump orig, Player self)
+        {
+            orig(self);
+            self.jumpBoost += 3f;
+        }
+
+
+        // SlugBase //
 
         public override Color? SlugcatColor() => new Color(0.37f, 0.36f, 0.91f);
 
         public override bool HasGuideOverseer => false;
 
-        internal static string startRoom = "UW_I01";
-        public override string StartRoom => startRoom;
+        public override string StartRoom => "UW_I01";
 
         protected override void GetStats(SlugcatStats stats)
         {
