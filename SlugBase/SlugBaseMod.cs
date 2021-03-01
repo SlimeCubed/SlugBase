@@ -8,7 +8,7 @@ namespace SlugBase
 {
     internal class SlugBaseMod : PartialityMod
     {
-        public const string versionString = "0.1.1";
+        public const string versionString = "1.0.0";
 
         // AutoUpdate support
         public string updateURL = "http://beestuff.pythonanywhere.com/audb/api/mods/6/0";
