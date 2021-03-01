@@ -93,6 +93,11 @@ namespace SlugBase
         protected internal virtual void Prepare() { }
 
         /// <summary>
+        /// True if the current RainWorldGame instance is using this character.
+        /// </summary>
+        public bool Enabled { get; private set; }
+
+        /// <summary>
         /// Called once when a game is started as this character.
         /// </summary>
         protected internal abstract void Enable();
@@ -101,6 +106,18 @@ namespace SlugBase
         /// Called once when a game is ended as this character.
         /// </summary>
         protected internal abstract void Disable();
+
+        internal void EnableInternal()
+        {
+            Enabled = true;
+            Enable();
+        }
+
+        internal void DisableInternal()
+        {
+            Enabled = false;
+            Disable();
+        }
 
         /// <summary>
         /// Modifies a <see cref="SlugcatStats"/> instance to contain the stats for this character.

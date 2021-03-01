@@ -308,7 +308,7 @@ namespace SlugBase
             {
                 Debug.Log($"Started game as \"{ply.Name}\"");
                 CurrentCharacter = ply;
-                ply.Enable();
+                ply.EnableInternal();
             }
         }
 
@@ -316,14 +316,14 @@ namespace SlugBase
         {
             Debug.Log($"Started game as \"{customPlayer.Name}\"");
             CurrentCharacter = customPlayer;
-            customPlayer.Enable();
+            customPlayer.EnableInternal();
         }
 
         internal static void EndGame()
         {
             if (CurrentCharacter != null)
                 Debug.Log($"Ended game as \"{CurrentCharacter.Name}\"");
-            CurrentCharacter?.Disable();
+            CurrentCharacter?.DisableInternal();
         }
     }
 }
