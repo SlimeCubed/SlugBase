@@ -56,6 +56,11 @@ namespace SlugBase
         /// <summary>
         /// Enables or disables developer mode.
         /// </summary>
+        /// <remarks>
+        /// Setting this to true prevents the default implementations of <see cref="HasScene(string)"/>
+        /// and <see cref="HasSlideshow(string)"/> from caching their results. Doing this will lead to
+        /// more file operations, but will allow new scenes to be added without restarting the game.
+        /// </remarks>
         public bool DevMode {
             get => devMode;
             set {
