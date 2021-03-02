@@ -4,6 +4,12 @@ using System.Collections.Generic;
 /// <summary>
 /// A collection that attaches values to objects using <see cref="WeakReference"/>.
 /// </summary>
+/// <remarks>
+/// This is like ConditionalWeakTable, but with one major drawback:
+/// values that reference the key will stop the key from being garbage collected.
+/// <para>Make sure that each instance of <typeparamref name="TValue"/> contains
+/// no references to the key, otherwise a memory leak may occur!</para>
+/// </remarks>
 /// <typeparam name="TKey">The type to attach the value to.</typeparam>
 /// <typeparam name="TValue">The type the the attached value.</typeparam>
 public class AttachedField<TKey, TValue>
