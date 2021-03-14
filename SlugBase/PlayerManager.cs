@@ -13,6 +13,7 @@ namespace SlugBase
     public static class PlayerManager
     {
         internal static List<SlugBaseCharacter> customPlayers = new List<SlugBaseCharacter>();
+        internal static bool useOriginalColor;
         private static Dictionary<string, SlugBaseCharacter> customPlayersByName = new Dictionary<string, SlugBaseCharacter>();
         private static SlugBaseCharacter currentPlayer;
 
@@ -262,6 +263,7 @@ namespace SlugBase
         // Change player color on request
         private static Color PlayerGraphics_SlugcatColor(On.PlayerGraphics.orig_SlugcatColor orig, int i)
         {
+            if (useOriginalColor) return orig(i);
             return GetCustomPlayer(i)?.SlugcatColor() ?? orig(i);
         }
 
