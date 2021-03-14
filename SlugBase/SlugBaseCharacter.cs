@@ -256,6 +256,13 @@ namespace SlugBase
         /// </remarks>
         public virtual CustomSaveState CreateNewSave(PlayerProgression progression) => new CustomSaveState(progression, this);
 
+        /// <summary>
+        /// The slugcat index to use for the world, such as placed object filters or creature spawns.
+        /// </summary>
+        /// <remarks>
+        /// This may be set through the <c>useSpawns</c> parameter of <see cref="SlugBaseCharacter(string, FormatVersion, int)"/>.
+        /// </remarks>
+        public int WorldCharacter => useSpawns;
 
         //////////////////////////
         // SCENES AND RESOURCES //
