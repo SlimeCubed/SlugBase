@@ -84,9 +84,9 @@ namespace SlugBase
 
         /// <summary>
         /// The room that this player begins in when starting a new game.
-        /// Any values other than the default, "SU_C04", may need code to determine where to place the player.
+        /// Any values other than null or "SU_C04" may need code to determine where to place the player.
         /// </summary>
-        public virtual string StartRoom => "SU_C04";
+        public virtual string StartRoom => null;
 
         /// <summary>
         /// Called once as a game starts from the select screen or multiplayer menu.

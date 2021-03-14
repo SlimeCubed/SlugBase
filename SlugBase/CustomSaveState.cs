@@ -134,8 +134,9 @@ namespace SlugBase
             // This will produce extraneous debugging logs - consider somehow suppressing them
             orig(self, str, game);
 
-            if (str == string.Empty)
-                self.denPosition = css.Character.StartRoom;
+            string customStartRoom = css.Character.StartRoom;
+            if (str == string.Empty && customStartRoom != null)
+                self.denPosition = customStartRoom;
 
             var data = DataFromString(SearchForSavePair(str, "SLUGBASE", "<svB>", "<svA>"));
             var persistData = DataFromString(SearchForSavePair(str, "SLUGBASEPERSISTENT", "<svB>", "<svA>"));

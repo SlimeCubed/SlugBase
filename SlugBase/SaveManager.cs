@@ -68,9 +68,11 @@ namespace SlugBase
             if (self.currentSaveState != null && self.currentSaveState.saveStateNumber == saveStateNumber)
                 return self.currentSaveState.denPosition;
 
+            string startRoom = ply.StartRoom;
+
             int slot = self.rainWorld.options.saveSlot;
-            if (!HasCustomSaveData(ply.Name, slot))
-                return ply.StartRoom;
+            if (!HasCustomSaveData(ply.Name, slot) && startRoom != null)
+                return startRoom;
 
             string saveText = File.ReadAllText(GetSaveFilePath(ply.Name, slot));
 
@@ -81,7 +83,7 @@ namespace SlugBase
             if (results.Count > 0 && results[0].data != null)
                 return results[0].data;
 
-            return ply.StartRoom;
+            return startRoom ?? "SU_S01";
         }
 
         // If the current state represents a custom character and would be saved,
