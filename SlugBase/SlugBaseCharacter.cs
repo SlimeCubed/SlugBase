@@ -23,6 +23,7 @@ namespace SlugBase
         internal int slugcatIndex = -1;
         internal FormatVersion version;
         private bool devMode;
+        private EnabledState enabledState;
 
         /// <summary>
         /// Create a new custom character.
@@ -93,35 +94,66 @@ namespace SlugBase
         /// </summary>
         /// <remarks>
         /// This is called as soon possible, the moment that user's character choice is locked in.
-        /// Effects that must apply before the <see cref="RainWorldGame"/> instance is created may be done here.
         /// </remarks>
-        protected internal virtual void Prepare() { }
+        protected virtual void Prepare() { }
 
         /// <summary>
         /// True if the current RainWorldGame instance is using this character.
         /// </summary>
-        public bool Enabled { get; private set; }
+        public bool Enabled => enabledState == EnabledState.Enabled;
 
         /// <summary>
         /// Called once when a game is started as this character.
         /// </summary>
-        protected internal abstract void Enable();
+        protected abstract void Enable();
 
         /// <summary>
         /// Called once when a game is ended as this character.
         /// </summary>
-        protected internal abstract void Disable();
+        protected abstract void Disable();
 
         internal void EnableInternal()
         {
-            Enabled = true;
-            Enable();
+            while (enabledState != EnabledState.Enabled)
+                NextState();
         }
 
         internal void DisableInternal()
         {
-            Enabled = false;
-            Disable();
+            while (enabledState != EnabledState.Disabled)
+                NextState();
+        }
+
+        internal void PrepareInternal()
+        {
+            while (enabledState != EnabledState.Prepared)
+                NextState();
+        }
+
+        private void NextState()
+        {
+            try
+            {
+                switch (enabledState)
+                {
+                    case EnabledState.Disabled:
+                        enabledState = EnabledState.Prepared;
+                        Prepare();
+                        break;
+                    case EnabledState.Prepared:
+                        enabledState = EnabledState.Enabled;
+                        Enable();
+                        break;
+                    case EnabledState.Enabled:
+                        enabledState = EnabledState.Disabled;
+                        Disable();
+                        break;
+                }
+            }
+            catch(Exception e)
+            {
+                Debug.LogException(new Exception($"Failed to change enabled state for SlugBase character \"{Name}\".", e));
+            }
         }
 
         /// <summary>
@@ -430,6 +462,13 @@ namespace SlugBase
             /// The current version. Use this one.
             /// </summary>
             V1 = 0
+        }
+
+        private enum EnabledState
+        {
+            Disabled,
+            Prepared,
+            Enabled
         }
     }
 }

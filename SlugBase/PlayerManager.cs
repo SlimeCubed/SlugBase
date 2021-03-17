@@ -89,6 +89,7 @@ namespace SlugBase
 
         internal static void ApplyHooks()
         {
+            On.ProcessManager.RequestMainProcessSwitch_1 += ProcessManager_RequestMainProcessSwitch_1;
             On.WorldLoader.GeneratePopulation += WorldLoader_GeneratePopulation;
             On.SaveState.ctor += SaveState_ctor;
             On.TempleGuardAI.Update += TempleGuardAI_Update;
@@ -107,6 +108,25 @@ namespace SlugBase
         }
 
         #region HOOKS
+
+        // Make sure Prepare is called consistently
+        private static void ProcessManager_RequestMainProcessSwitch_1(On.ProcessManager.orig_RequestMainProcessSwitch_1 orig, ProcessManager self, ProcessManager.ProcessID ID, float fadeOutSeconds)
+        {
+            if (ID == ProcessManager.ProcessID.Game)
+            {
+                if (self.arenaSitting != null)
+                {
+                    ArenaAdditions.PlayerDescriptor ply = ArenaAdditions.GetSelectedArenaCharacter(self.arenaSetup);
+                    if (ply.type == ArenaAdditions.PlayerDescriptor.Type.SlugBase)
+                        ply.player.PrepareInternal();
+                }
+                else
+                {
+                    GetCustomPlayer(self.rainWorld.progression.PlayingAsSlugcat)?.PrepareInternal();
+                }
+            }
+            orig(self, ID, fadeOutSeconds);
+        }
 
         // Stop Iggy from spawning in on request
         private static void WorldLoader_GeneratePopulation(On.WorldLoader.orig_GeneratePopulation orig, WorldLoader self, bool fresh)
@@ -298,7 +318,11 @@ namespace SlugBase
         private static void RainWorldGame_ShutDownProcess(On.RainWorldGame.orig_ShutDownProcess orig, RainWorldGame self)
         {
             orig(self);
-            EndGame();
+
+            // Do not end the game if the upcoming process is also the game, such as with RainWorldGame.RestartGame
+            // This is to prevent the character from being disabled while it is already prepared
+            if (self.manager.upcomingProcess != ProcessManager.ProcessID.Game)
+                EndGame();
         }
 
         #endregion HOOKS

@@ -21,7 +21,6 @@ namespace SlugBase
     {
         public static void ApplyHooks()
         {
-            On.Menu.SlugcatSelectMenu.StartGame += SlugcatSelectMenu_StartGame;
             On.Menu.SlugcatSelectMenu.UpdateStartButtonText += SlugcatSelectMenu_UpdateStartButtonText;
             new Hook(
                 typeof(SlugcatSelectMenu.SlugcatPageContinue).GetProperty("saveGameData", BindingFlags.Public | BindingFlags.Instance).GetGetMethod(),
@@ -34,18 +33,6 @@ namespace SlugBase
             On.Menu.SlugcatSelectMenu.SlugcatPage.ctor += SlugcatPage_ctor;
             On.Menu.SlugcatSelectMenu.SlugcatPageNewGame.ctor += SlugcatPageNewGame_ctor;
             On.HUD.KarmaMeter.Draw += KarmaMeter_Draw;
-        }
-
-        // Call Prepare on the character that is about to start
-        // This should give the most time possible to respond before the game starts
-        // A mod could change which CRS regions are active, or start loading something
-        // ... in another thread, the join it in Enable
-        private static void SlugcatSelectMenu_StartGame(On.Menu.SlugcatSelectMenu.orig_StartGame orig, SlugcatSelectMenu self, int storyGameCharacter)
-        {
-            SlugBaseCharacter ply = PlayerManager.GetCustomPlayer(storyGameCharacter);
-            if(ply != null)
-                ply.Prepare();
-            orig(self, storyGameCharacter);
         }
 
         // Stop GetSaveGameData from inlining

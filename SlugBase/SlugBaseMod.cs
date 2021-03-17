@@ -8,7 +8,7 @@ namespace SlugBase
 {
     internal class SlugBaseMod : PartialityMod
     {
-        public const string versionString = "1.1.0";
+        public const string versionString = "1.1.1";
 
         // AutoUpdate support
         public string updateURL = "http://beestuff.pythonanywhere.com/audb/api/mods/6/0";
@@ -60,13 +60,16 @@ namespace SlugBase
             ShelterScreens.ApplyHooks();
             WorldFixes.ApplyHooks();
 
+            // Compatibility fixes
+            Compatibility.HookGenFix.Apply();
+
             On.RainWorld.Start += RainWorld_Start;
         }
 
         // Apply modules that must be added late
         private void RainWorld_Start(On.RainWorld.orig_Start orig, RainWorld self)
         {
-            // Compatibility fixes
+            // Compatibility fixes (applied over other hooks)
             Compatibility.FancySlugcats.Apply();
 
             orig(self);

@@ -63,6 +63,7 @@
     <Compile Include="ArenaAdditions.cs" />
     <Compile Include="AttachedField.cs" />
     <Compile Include="Compatibility\FancySlugcats.cs" />
+    <Compile Include="Compatibility\HookGenFix.cs" />
     <Compile Include="SlugBaseCharacter.cs" />
     <Compile Include="CustomSaveState.cs" />
     <Compile Include="Scenes\CustomScene.cs" />
