@@ -227,7 +227,7 @@ namespace SlugBase
         {
             if (lock_CanEatMeat || !UsingCustomCharacter) return orig(self, crit);
 
-            if (crit is IPlayerEdible || !crit.dead) return false;
+            if ((crit is IPlayerEdible edible && edible.Edible) || !crit.dead) return false;
             lock_CanEatMeat = true;
             try
             {
