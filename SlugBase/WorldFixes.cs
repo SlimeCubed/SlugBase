@@ -37,11 +37,19 @@ namespace SlugBase
                 return;
             }
 
+            int maxIndex = -1;
+            foreach (SlugBaseCharacter ply in PlayerManager.customPlayers)
+                maxIndex = Mathf.Max(maxIndex, ply.slugcatIndex);
+
             // Add custom characterse to the shelter list
-            ResizeToFit(ref self.playerShelters, 3 + PlayerManager.customPlayers.Count, null);
-            for (int i = 3; i < self.playerShelters.Length; i++)
+            int oldLen = self.playerShelters.Length;
+            if (oldLen < maxIndex)
             {
-                self.playerShelters[i] = self.manager.rainWorld.progression.ShelterOfSaveGame(i);
+                ResizeToFit(ref self.playerShelters, maxIndex + 1, null);
+                for (int i = oldLen; i < self.playerShelters.Length; i++)
+                {
+                    self.playerShelters[i] = self.manager.rainWorld.progression.ShelterOfSaveGame(i);
+                }
             }
 
             var prog = self.manager.rainWorld.progression;
@@ -77,8 +85,16 @@ namespace SlugBase
 
         private static void FastTravelScreen_ctor(On.Menu.FastTravelScreen.orig_ctor orig, Menu.FastTravelScreen self, ProcessManager manager, ProcessManager.ProcessID ID)
         {
-            checkFastTravelForCustom = true;
-            orig(self, manager, ID);
+            if(PlayerManager.GetCustomPlayer(self.PlayerCharacter) != null)
+                checkFastTravelForCustom = true;
+            try
+            {
+                orig(self, manager, ID);
+            }
+            finally
+            {
+                checkFastTravelForCustom = false;
+            }
         }
 
         // WorldLoader
