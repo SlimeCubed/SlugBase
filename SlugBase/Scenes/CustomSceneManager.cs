@@ -22,6 +22,7 @@ namespace SlugBase
         internal static void ApplyHooks()
         {
             On.Menu.SlideShowMenuScene.ApplySceneSpecificAlphas += SlideShowMenuScene_ApplySceneSpecificAlphas;
+            On.RainWorldGame.ExitToVoidSeaSlideShow += RainWorldGame_ExitToVoidSeaSlideShow;
             On.Menu.SlugcatSelectMenu.StartGame += SlugcatSelectMenu_StartGame;
             On.Menu.SlideShow.ctor += SlideShow_ctor;
             On.Menu.MenuScene.BuildScene += MenuScene_BuildScene;
@@ -44,6 +45,19 @@ namespace SlugBase
             }
         }
 
+        // Automatically override outro cutscenes
+        private static void RainWorldGame_ExitToVoidSeaSlideShow(On.RainWorldGame.orig_ExitToVoidSeaSlideShow orig, RainWorldGame self)
+        {
+            orig(self);
+
+            // Override the outro if this character has the corresponding slideshow
+            SlugBaseCharacter ply = PlayerManager.GetCustomPlayer(self.StoryCharacter);
+            if (ply == null) return;
+            if (ply.HasSlideshow("Outro"))
+                OverrideNextSlideshow(ply, "Outro");
+        }
+
+        // Automatically override intro cutscenes
         private static void SlugcatSelectMenu_StartGame(On.Menu.SlugcatSelectMenu.orig_StartGame orig, SlugcatSelectMenu self, int storyGameCharacter)
         {
             orig(self, storyGameCharacter);
@@ -94,100 +108,111 @@ namespace SlugBase
                 return;
             }
 
-            // Call the original constructor, save a reference to the loading label
-            // This will always be empty, due to the ID of -1
-            FLabel loadingLabel = manager.loadingLabel;
-            orig(self, manager, (SlideShow.SlideShowID)(-1));
-
-            // Undo RemoveLoadingLabel and NextScene
-            manager.loadingLabel = loadingLabel;
-            Futile.stage.AddChild(loadingLabel);
-            self.current = -1;
-
-            // Load a custom scene
-
-            SlugBaseCharacter owner = slideshowOverride.Owner;
-            List<SlideshowSlide> slides = slideshowOverride.Slides;
-
-            // Chose a destination process
-            if (slideshowOverride.NextProcess == null)
-            {
-                switch (slideShowID)
-                {
-                    case SlideShow.SlideShowID.WhiteIntro:
-                    case SlideShow.SlideShowID.YellowIntro:
-                        self.nextProcess = ProcessManager.ProcessID.Game;
-                        break;
-                    case SlideShow.SlideShowID.WhiteOutro:
-                    case SlideShow.SlideShowID.YellowOutro:
-                    case SlideShow.SlideShowID.RedOutro:
-                        self.nextProcess = ProcessManager.ProcessID.Credits;
-                        break;
-                    default:
-                        // Take a best guess
-                        // Accidentally going to the game is better than accidentally going to the credits
-                        self.nextProcess = ProcessManager.ProcessID.Game;
-                        break;
-                }
-            } else
-            {
-                self.nextProcess = slideshowOverride.NextProcess.Value;
-            }
-
-            // Custom music
-            if (manager.musicPlayer != null)
-            {
-                self.waitForMusic = slideshowOverride.Music;
-                self.stall = true;
-                manager.musicPlayer.MenuRequestsSong(self.waitForMusic, 1.5f, 40f);
-            }
-
-            // Custom playlist
-            float time = 0f;
-            float endTime;
-            self.playList.Clear();
-            foreach(SlideshowSlide slide in slides)
-            {
-                if (!slide.Enabled) continue;
-                endTime = time + slide.Duration;
-                self.playList.Add(new SlideShow.Scene(MenuScene.SceneID.Empty, time, time + slide.FadeIn, endTime - slide.FadeOut));
-                time = endTime;
-            }
-
-            // Preload the scenes
-            self.preloadedScenes = new SlideShowMenuScene[self.playList.Count];
             try
             {
-                for (int i = 0; i < self.preloadedScenes.Length; i++)
-                {
-                    MenuScene.SceneID id = MenuScene.SceneID.Empty;
-                    if (slideshowOverride.Owner.HasScene(slides[i].SceneName))
-                    {
-                        // Prioritize this character's scenes
-                        OverrideNextScene(slideshowOverride.Owner, slideshowOverride.Slides[i].SceneName);
-                    } else
-                    {
-                        ClearSceneOverride();
-                        try
-                        {
-                            // ... then try existing scenes
-                            id = Custom.ParseEnum<MenuScene.SceneID>(slides[i].SceneName);
-                        } catch(Exception)
-                        {
-                            // ... and default to Empty
-                            id = MenuScene.SceneID.Empty;
-                        }
-                    }
-                    self.preloadedScenes[i] = new SlideShowMenuScene(self, self.pages[0], id);
-                    self.preloadedScenes[i].Hide();
+                // Call the original constructor, save a reference to the loading label
+                // This will always be empty, due to the ID of -1
+                FLabel loadingLabel = manager.loadingLabel;
+                orig(self, manager, (SlideShow.SlideShowID)(-1));
 
-                    List<Vector3> camPath = self.preloadedScenes[i].cameraMovementPoints;
-                    camPath.Clear();
-                    camPath.AddRange(slides[i].CameraPath);
+                // Undo RemoveLoadingLabel and NextScene
+                manager.loadingLabel = loadingLabel;
+                Futile.stage.AddChild(loadingLabel);
+                self.current = -1;
+
+                // Load a custom scene
+
+                SlugBaseCharacter owner = slideshowOverride.Owner;
+                List<SlideshowSlide> slides = slideshowOverride.Slides;
+
+                // Chose a destination process
+                if (slideshowOverride.NextProcess == null)
+                {
+                    switch (slideShowID)
+                    {
+                        case SlideShow.SlideShowID.WhiteIntro:
+                        case SlideShow.SlideShowID.YellowIntro:
+                            self.nextProcess = ProcessManager.ProcessID.Game;
+                            break;
+                        case SlideShow.SlideShowID.WhiteOutro:
+                        case SlideShow.SlideShowID.YellowOutro:
+                        case SlideShow.SlideShowID.RedOutro:
+                            self.nextProcess = ProcessManager.ProcessID.Credits;
+                            break;
+                        default:
+                            // Take a best guess
+                            // Accidentally going to the game is better than accidentally going to the credits
+                            self.nextProcess = ProcessManager.ProcessID.Game;
+                            break;
+                    }
                 }
-            } finally
+                else
+                {
+                    self.nextProcess = slideshowOverride.NextProcess.Value;
+                }
+
+                // Custom music
+                if (manager.musicPlayer != null)
+                {
+                    self.waitForMusic = slideshowOverride.Music;
+                    self.stall = true;
+                    manager.musicPlayer.MenuRequestsSong(self.waitForMusic, 1.5f, 40f);
+                }
+
+                // Custom playlist
+                float time = 0f;
+                float endTime;
+                self.playList.Clear();
+                foreach (SlideshowSlide slide in slides)
+                {
+                    if (!slide.Enabled) continue;
+                    endTime = time + slide.Duration;
+                    self.playList.Add(new SlideShow.Scene(MenuScene.SceneID.Empty, time, time + slide.FadeIn, endTime - slide.FadeOut));
+                    time = endTime;
+                }
+
+                // Preload the scenes
+                self.preloadedScenes = new SlideShowMenuScene[self.playList.Count];
+                try
+                {
+                    for (int i = 0; i < self.preloadedScenes.Length; i++)
+                    {
+                        MenuScene.SceneID id = MenuScene.SceneID.Empty;
+                        if (slideshowOverride.Owner.HasScene(slides[i].SceneName))
+                        {
+                            // Prioritize this character's scenes
+                            OverrideNextScene(slideshowOverride.Owner, slideshowOverride.Slides[i].SceneName);
+                        }
+                        else
+                        {
+                            ClearSceneOverride();
+                            try
+                            {
+                                // ... then try existing scenes
+                                id = Custom.ParseEnum<MenuScene.SceneID>(slides[i].SceneName);
+                            }
+                            catch (Exception)
+                            {
+                                // ... and default to Empty
+                                id = MenuScene.SceneID.Empty;
+                            }
+                        }
+                        self.preloadedScenes[i] = new SlideShowMenuScene(self, self.pages[0], id);
+                        self.preloadedScenes[i].Hide();
+
+                        List<Vector3> camPath = self.preloadedScenes[i].cameraMovementPoints;
+                        camPath.Clear();
+                        camPath.AddRange(slides[i].CameraPath);
+                    }
+                }
+                finally
+                {
+                    ClearSceneOverride();
+                }
+            }
+            finally
             {
-                ClearSceneOverride();
+                ClearSlideshowOverride();
             }
             manager.RemoveLoadingLabel();
             self.NextScene();
