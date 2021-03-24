@@ -18,7 +18,7 @@ namespace ExampleSlugcat
         public ExampleSlugcatMod()
         {
             ModID = "Example Slugcat";
-            Version = "1.0";
+            Version = "1.1";
             author = "Slime_Cubed";
         }
 
