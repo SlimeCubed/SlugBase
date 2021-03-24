@@ -59,8 +59,11 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="SprinterSlugcat.cs" />
+    <Compile Include="SprinterSaveState.cs" />
+    <Compile Include="SprinterMod.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="SprinterSlugcat.cs" />
+    <Compile Include="SprinterStart.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\SlugBase\SlugBase.csproj">
