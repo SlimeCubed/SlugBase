@@ -29,7 +29,7 @@ namespace SlugBase
         public static SlugBaseCharacter CurrentCharacter
         {
             get => currentPlayer;
-            private set => currentPlayer = value;
+            internal set => currentPlayer = value;
         }
 
         /// <summary>
@@ -333,7 +333,6 @@ namespace SlugBase
             if(ply != null)
             {
                 Debug.Log($"Started game as \"{ply.Name}\"");
-                CurrentCharacter = ply;
                 ply.EnableInternal();
             }
         }
@@ -341,7 +340,6 @@ namespace SlugBase
         internal static void StartGame(SlugBaseCharacter customPlayer)
         {
             Debug.Log($"Started game as \"{customPlayer.Name}\"");
-            CurrentCharacter = customPlayer;
             customPlayer.EnableInternal();
         }
 

@@ -142,10 +142,21 @@ namespace SlugBase
                         break;
                     case EnabledState.Prepared:
                         enabledState = EnabledState.Enabled;
+
+                        if (PlayerManager.CurrentCharacter != null)
+                            Debug.Log($"Character mismatch! Enabled \"{Name}\" while playing as \"{PlayerManager.CurrentCharacter.Name}\"!");
+                        PlayerManager.CurrentCharacter = this;
+
                         Enable();
                         break;
                     case EnabledState.Enabled:
                         enabledState = EnabledState.Disabled;
+                        
+                        if (PlayerManager.CurrentCharacter == this)
+                            PlayerManager.CurrentCharacter = null;
+                        else
+                            Debug.Log($"Character mismatch! Disabled \"{Name}\" while playing as \"{PlayerManager.CurrentCharacter?.Name ?? "None"}\"!");
+
                         Disable();
                         break;
                 }
