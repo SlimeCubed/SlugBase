@@ -45,8 +45,10 @@ namespace SlugBase
 		private static List<KeyValuePair<MenuDepthIllustration, Vector2>> moveImages = new List<KeyValuePair<MenuDepthIllustration, Vector2>>();
         private static void MenuScene_AddIllustration(On.Menu.MenuScene.orig_AddIllustration orig, MenuScene self, MenuIllustration newIllu)
         {
+			SlugBaseCharacter chara = PlayerManager.GetCustomPlayer(self.menu.manager.rainWorld.progression.miscProgressionData.currentlySelectedSinglePlayerSlugcat);
 			if (newIllu.fileName == "Sleep - 2 - Red"
-				&& !(PlayerManager.GetCustomPlayer(self.menu.manager.rainWorld.progression.miscProgressionData.currentlySelectedSinglePlayerSlugcat)?.HasScene("SleepScreen") ?? false)
+				&& chara != null
+				&& !chara.HasScene("SleepScreen")
 				&& ((self.menu as SleepAndDeathScreen)?.IsSleepScreen ?? false)
 				&& newIllu is MenuDepthIllustration mdi)
 			{
