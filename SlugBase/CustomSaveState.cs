@@ -226,6 +226,7 @@ namespace SlugBase
                 char c = value[i];
                 if (escape)
                 {
+                    escape = false;
                     switch(c)
                     {
                         case '\\': sb.Append('\\'); break;
