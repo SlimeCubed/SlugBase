@@ -15,7 +15,8 @@ namespace SlugBase
             On.Menu.FastTravelScreen.InitiateRegionSwitch += FastTravelScreen_InitiateRegionSwitch;
             On.Menu.FastTravelScreen.ctor += FastTravelScreen_ctor;
 
-            On.WorldLoader.ctor += WorldLoader_ctor;
+            //On.WorldLoader.ctor += WorldLoader_ctor;
+            // deferred, moved to start
 
             On.RoomSettings.ctor += RoomSettings_ctor;
 
@@ -24,6 +25,11 @@ namespace SlugBase
 
             On.EventTrigger.FromString += EventTrigger_FromString;
             On.EventTrigger.ctor += EventTrigger_ctor;
+        }
+
+        internal static void LateApply()
+        {
+            On.WorldLoader.ctor += WorldLoader_ctor;
         }
 
         // FastTravelScreen

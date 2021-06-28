@@ -72,6 +72,7 @@ namespace SlugBase
         {
             // Compatibility fixes (applied over other hooks)
             Compatibility.FancySlugcats.Apply();
+            WorldFixes.LateApply();
 
             orig(self);
             On.RainWorld.Start -= RainWorld_Start;
