@@ -89,6 +89,7 @@ namespace SlugBase
 
         internal static void ApplyHooks()
         {
+            On.Room.Loaded += Room_Loaded;
             On.ProcessManager.RequestMainProcessSwitch_1 += ProcessManager_RequestMainProcessSwitch_1;
             On.WorldLoader.GeneratePopulation += WorldLoader_GeneratePopulation;
             On.SaveState.ctor += SaveState_ctor;
@@ -108,6 +109,19 @@ namespace SlugBase
         }
 
         #region HOOKS
+
+        private static void Room_Loaded(On.Room.orig_Loaded orig, Room self)
+        {
+            if (UsingCustomCharacter && self.abstractRoom?.name is string roomName && self.abstractRoom.firstTimeRealized)
+            {
+                orig(self);
+
+                if (self.game?.GetStorySession?.saveState is SaveState save && save.cycleNumber == 0 && save.denPosition == roomName) {
+                    CurrentCharacter.StartNewGame(self);
+                }
+            }
+            else orig(self);
+        }
 
         // Make sure Prepare is called consistently
         private static void ProcessManager_RequestMainProcessSwitch_1(On.ProcessManager.orig_RequestMainProcessSwitch_1 orig, ProcessManager self, ProcessManager.ProcessID ID, float fadeOutSeconds)

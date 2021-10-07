@@ -187,6 +187,14 @@ namespace SlugBase
         }
 
         /// <summary>
+        /// Called once after the room containing the player is loaded on a new save. Note that <paramref name="room"/> isn't necessarily <see cref="StartRoom"/>, so make sure to check <see cref="AbstractRoom.name"/> before running any room-specific scripts.
+        /// </summary>
+        /// <param name="room">The room containing the player.</param>
+        public virtual void StartNewGame(Room room)
+        {
+        }
+
+        /// <summary>
         /// Get the amount of food that this character needs to sleep and the total amount that it can hold.
         /// Defaults to Survivor's food meter.
         /// </summary>
