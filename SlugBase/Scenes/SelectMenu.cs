@@ -208,7 +208,9 @@ namespace SlugBase
             // All other player mods should change this array, so we have a nice lower bound for indices we can take
 
             // Find the next available slugcat index, skipping Nightcat
-            int firstCustomIndex = 4;
+            ref int firstCustomIndex = ref SlugBaseMod.FirstCustomIndex;
+
+            firstCustomIndex = 4;
             
             // Take color order into account
             for (int i = 0; i < self.slugcatColorOrder.Length; i++)
@@ -230,7 +232,7 @@ namespace SlugBase
                 // Assign each player a unique index, then save it to the page order
                 // This will cause weird behavior if the user skips over the title screen using EDT, so... don't do that
                 self.slugcatColorOrder[origLength + i] = nextCustomIndex;
-                plys[i].slugcatIndex = nextCustomIndex++;
+                plys[i].SlugcatIndex = nextCustomIndex++;
             }
 
             // Retrieve save data
@@ -238,7 +240,7 @@ namespace SlugBase
 
             for(int i = 0; i < plys.Count; i++)
             {
-                self.saveGameData[origLength + i] = SlugcatSelectMenu.MineForSaveData(self.manager, plys[i].slugcatIndex);
+                self.saveGameData[origLength + i] = SlugcatSelectMenu.MineForSaveData(self.manager, plys[i].SlugcatIndex);
             }
 
             // Add a new page to the menu

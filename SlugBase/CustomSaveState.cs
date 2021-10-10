@@ -21,7 +21,7 @@ namespace SlugBase
         /// <param name="progression">The <see cref="PlayerProgression"/> instance to attach this save state to.</param>
         /// <param name="character">The SlugBase character that owns this save state.</param>
         /// <exception cref="ArgumentException">Thrown when <paramref name="character"/> is null.</exception>
-        public CustomSaveState(PlayerProgression progression, SlugBaseCharacter character) : base(character.slugcatIndex, progression)
+        public CustomSaveState(PlayerProgression progression, SlugBaseCharacter character) : base(character.SlugcatIndex, progression)
         {
             if (character == null) throw new ArgumentException("Character may not be null.", nameof(character));
             Character = character;
