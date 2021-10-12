@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
+using System.Linq;
 using RWCustom;
 using UnityEngine;
 
@@ -83,8 +84,7 @@ namespace SlugBase
         /// <returns>A <see cref="SlugBaseCharacter"/> instace with the given index or null.</returns>
         public static SlugBaseCharacter GetCustomPlayer(int index)
         {
-            for (int i = 0; i < customPlayers.Count; i++) if (customPlayers[i].slugcatIndex == index) return customPlayers[i];
-            return null;
+            return customPlayers.FirstOrDefault(s => s.SlugcatIndex == index);
         }
 
         internal static void ApplyHooks()

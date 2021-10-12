@@ -45,7 +45,7 @@ namespace SlugBase
 
             int maxIndex = -1;
             foreach (SlugBaseCharacter ply in PlayerManager.customPlayers)
-                maxIndex = Mathf.Max(maxIndex, ply.slugcatIndex);
+                maxIndex = Mathf.Max(maxIndex, ply.SlugcatIndex);
 
             // Add custom characterse to the shelter list
             int oldLen = self.playerShelters.Length;
@@ -123,7 +123,7 @@ namespace SlugBase
             orig(self, s);
 
             if(PlayerManager.UsingCustomCharacter)
-                self.availableToPlayers[PlayerManager.CurrentCharacter.slugcatIndex] = self.availableToPlayers[PlayerManager.CurrentCharacter.useSpawns];
+                self.availableToPlayers[PlayerManager.CurrentCharacter.SlugcatIndex] = self.availableToPlayers[PlayerManager.CurrentCharacter.useSpawns];
         }
 
         private static void CollectTokenData_ctor(On.CollectToken.CollectTokenData.orig_ctor orig, CollectToken.CollectTokenData self, PlacedObject owner, bool isBlue)
@@ -139,7 +139,7 @@ namespace SlugBase
             orig(self, s);
 
             if(PlayerManager.UsingCustomCharacter)
-                self.slugcats[PlayerManager.CurrentCharacter.slugcatIndex] = self.slugcats[PlayerManager.CurrentCharacter.useSpawns];
+                self.slugcats[PlayerManager.CurrentCharacter.SlugcatIndex] = self.slugcats[PlayerManager.CurrentCharacter.useSpawns];
         }
 
         private static void EventTrigger_ctor(On.EventTrigger.orig_ctor orig, EventTrigger self, EventTrigger.TriggerType type)
@@ -164,7 +164,7 @@ namespace SlugBase
         {
             if (!PlayerManager.UsingCustomCharacter) return;
 
-            ResizeToFit(ref array, PlayerManager.CurrentCharacter.slugcatIndex + 1, initValue);
+            ResizeToFit(ref array, PlayerManager.CurrentCharacter.SlugcatIndex + 1, initValue);
         }
     }
 }

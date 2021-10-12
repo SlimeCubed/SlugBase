@@ -20,8 +20,8 @@ namespace SlugBase
         internal int useSpawns;
         // Try not to use this for anything saved!
         // This is for situations where an index is expected by the vanilla game or other mods
-        internal int slugcatIndex = -1;
         internal FormatVersion version;
+        private int slugcatIndex = -1;
         private bool devMode;
         private EnabledState enabledState;
 
@@ -77,7 +77,10 @@ namespace SlugBase
         /// Use this value only when absolutely necessary.
         /// This may be -1, even when in a story game, and may change each time the game is launched.
         /// </remarks>
-        public int SlugcatIndex => slugcatIndex;
+        public int SlugcatIndex {
+            get => slugcatIndex > -1 ? slugcatIndex : slugcatIndex = SlugBaseMod.FirstCustomIndex + PlayerManager.customPlayers.IndexOf(this);
+            internal set => slugcatIndex = value;
+        }
 
         //////////////
         // GAMEPLAY //
@@ -182,7 +185,7 @@ namespace SlugBase
         internal void GetStatsInternal(SlugcatStats stats)
         {
             stats.throwingSkill = stats.malnourished ? 0 : 1;
-            stats.name = (SlugcatStats.Name)slugcatIndex;
+            stats.name = (SlugcatStats.Name)SlugcatIndex;
             GetStats(stats);
         }
 

@@ -77,5 +77,17 @@ namespace SlugBase
             orig(self);
             On.RainWorld.Start -= RainWorld_Start;
         }
+
+        public object GetReloadState()
+        {
+            return FirstCustomIndex;
+        }
+
+        public void Reload(object state)
+        {
+            FirstCustomIndex = (int)state;
+        }
+
+        internal static int FirstCustomIndex = 4;
     }
 }
