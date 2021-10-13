@@ -1,5 +1,6 @@
 {
 	"images": [
+		{"name":"Flat.png", "x":0, "y":0, "depth":-1.0, "flatmode":true},
 		{"name":"Background.png", "x":442, "y":134, "depth":3.5},
 		{"name":"Bg Plants.png", "x":488, "y":197, "depth":3.2},
 		{"name":"Sprinter.png", "x":516, "y":185, "depth":3.0, "shader":"LightEdges"},

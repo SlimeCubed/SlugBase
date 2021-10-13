@@ -52,6 +52,7 @@ namespace SlugBase
         public override void OnLoad()
         {
             // Compatibility fixes
+            Compatibility.FlatmodeFix.Apply();
             Compatibility.HookGenFix.Apply();
 
             // Core changes

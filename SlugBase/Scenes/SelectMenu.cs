@@ -19,6 +19,8 @@ namespace SlugBase
 
     internal static class SelectMenu
     {
+        private static bool selectMenuShimActive = false;
+
         public static void ApplyHooks()
         {
             On.Menu.SlugcatSelectMenu.UpdateStartButtonText += SlugcatSelectMenu_UpdateStartButtonText;
@@ -29,6 +31,7 @@ namespace SlugBase
             On.Menu.SlugcatSelectMenu.GetSaveGameData += SlugcatSelectMenu_GetSaveGameData;
             On.Menu.SlugcatSelectMenu.MineForSaveData += SlugcatSelectMenu_MineForSaveData;
             On.Menu.SlugcatSelectMenu.ctor += SlugcatSelectMenu_ctor;
+            On.Menu.HoldButton.ctor += HoldButton_ctor;
             On.Menu.SlugcatSelectMenu.SlugcatPage.AddImage += SlugcatPage_AddImage;
             On.Menu.SlugcatSelectMenu.SlugcatPage.ctor += SlugcatPage_ctor;
             On.Menu.SlugcatSelectMenu.SlugcatPageNewGame.ctor += SlugcatPageNewGame_ctor;
@@ -195,11 +198,31 @@ namespace SlugBase
         }
 
         // Add custom slugcat select screens
-        private static void SlugcatSelectMenu_ctor(On.Menu.SlugcatSelectMenu.orig_ctor orig, Menu.SlugcatSelectMenu self, ProcessManager manager)
+        private static void SlugcatSelectMenu_ctor(On.Menu.SlugcatSelectMenu.orig_ctor orig, SlugcatSelectMenu self, ProcessManager manager)
         {
-            int selectedSlugcat = manager.rainWorld.progression.miscProgressionData.currentlySelectedSinglePlayerSlugcat;
+            try
+            {
+                selectMenuShimActive = true;
+                orig(self, manager);
+            }
+            finally
+            {
+                selectMenuShimActive = false;
+            }
+        }
 
-            orig(self, manager);
+        // Shim to add the slugcat pages at the correct layer
+        // The hold button is the first object that needs to be layed above the scenes
+        private static void HoldButton_ctor(On.Menu.HoldButton.orig_ctor orig, HoldButton self, Menu.Menu menu, MenuObject owner, string displayText, string singalText, Vector2 pos, float fillTime)
+        {
+            if (selectMenuShimActive && singalText == "START" && menu is SlugcatSelectMenu ssm)
+                AddSlugBaseScenes(ssm);
+            orig(self, menu, owner, displayText, singalText, pos, fillTime);
+        }
+
+        private static void AddSlugBaseScenes(SlugcatSelectMenu self)
+        {
+            int selectedSlugcat = self.manager.rainWorld.progression.miscProgressionData.currentlySelectedSinglePlayerSlugcat;
 
             List<SlugBaseCharacter> plys = PlayerManager.customPlayers;
             int origLength = self.slugcatColorOrder.Length;
@@ -211,20 +234,20 @@ namespace SlugBase
             ref int firstCustomIndex = ref SlugBaseMod.FirstCustomIndex;
 
             firstCustomIndex = 4;
-            
+
             // Take color order into account
             for (int i = 0; i < self.slugcatColorOrder.Length; i++)
                 firstCustomIndex = Math.Max(self.slugcatColorOrder[i] + 1, firstCustomIndex);
-            
+
             // Take slugcat names into account
-            foreach(SlugcatStats.Name name in Enum.GetValues(typeof(SlugcatStats.Name)))
+            foreach (SlugcatStats.Name name in Enum.GetValues(typeof(SlugcatStats.Name)))
                 firstCustomIndex = Math.Max((int)name + 1, firstCustomIndex);
 
             int nextCustomIndex = firstCustomIndex;
 
             // Add SlugBase characters to the page order and assign empty slots a default value
             Array.Resize(ref self.slugcatColorOrder, origLength + plys.Count);
-            for(int i = origLength; i < self.slugcatColorOrder.Length; i++)
+            for (int i = origLength; i < self.slugcatColorOrder.Length; i++)
                 self.slugcatColorOrder[i] = -1;
 
             for (int i = 0; i < plys.Count; i++)
@@ -238,7 +261,7 @@ namespace SlugBase
             // Retrieve save data
             Array.Resize(ref self.saveGameData, origLength + plys.Count);
 
-            for(int i = 0; i < plys.Count; i++)
+            for (int i = 0; i < plys.Count; i++)
             {
                 self.saveGameData[origLength + i] = SlugcatSelectMenu.MineForSaveData(self.manager, plys[i].SlugcatIndex);
             }
@@ -246,7 +269,7 @@ namespace SlugBase
             // Add a new page to the menu
             Array.Resize(ref self.slugcatPages, origLength + plys.Count);
 
-            for(int i = 0; i < plys.Count; i++)
+            for (int i = 0; i < plys.Count; i++)
             {
                 int o = origLength + i;
                 if (self.saveGameData[o] != null)
@@ -263,10 +286,6 @@ namespace SlugBase
                     self.slugcatPageIndex = o;
 
                 self.pages.Add(self.slugcatPages[o]);
-
-                // Make sure the start button reflects the changed slugcat index
-                self.UpdateStartButtonText();
-                self.UpdateSelectedSlugcatInMiscProg();
             }
         }
 

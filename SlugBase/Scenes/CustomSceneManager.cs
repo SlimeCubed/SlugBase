@@ -344,20 +344,6 @@ namespace SlugBase
                             if (crisp) illust.sprite.element.atlas.texture.filterMode = FilterMode.Point;
                         }
 
-                        // Add idle depths
-                        if(self is InteractiveMenuScene ims)
-                        {
-                            ims.idleDepths = new List<float>();
-                            List<object> depths = sceneOverride.GetProperty<List<object>>("idledepths");
-                            if(depths != null)
-                            {
-                                for (int i = 0; i < depths.Count; i++) {
-                                    if (depths[i] is double depth)
-                                        ims.idleDepths.Add((float)depth);
-                                }
-                            }
-                        }
-
                         // Apply tags
                         if (shader != null) illust.sprite.shader = shader;
                         illust.setAlpha = alpha;
@@ -365,6 +351,21 @@ namespace SlugBase
 
                         // Link back to the custom scene image
                         customRep[illust] = img;
+                    }
+
+                    // Add idle depths
+                    if (self is InteractiveMenuScene ims)
+                    {
+                        ims.idleDepths = new List<float>();
+                        List<object> depths = sceneOverride.GetProperty<List<object>>("idledepths");
+                        if (depths != null)
+                        {
+                            for (int i = 0; i < depths.Count; i++)
+                            {
+                                if (depths[i] is double depth)
+                                    ims.idleDepths.Add((float)depth);
+                            }
+                        }
                     }
 
                 }
