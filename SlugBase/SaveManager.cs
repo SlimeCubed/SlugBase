@@ -273,17 +273,48 @@ namespace SlugBase
 
         /// <summary>
         /// Gets a summary of the content in a SlugBase character's save file.
+        /// If you need to access data saved using <see cref="CustomSaveState"/>, use <see cref="GetSaveSummary(RainWorld, string, int)"/> instead.
         /// </summary>
         /// <param name="rainWorld">The current <see cref="RainWorld"/> instance.</param>
         /// <param name="name">The name of the SlugBase character.</param>
         /// <param name="slot">The game's current save slot.</param>
-        /// <returns>A summary of the given character's save file.</returns>
+        /// <returns>A summary of the given character's save file or null if the file could not be found.</returns>
         public static SlugcatSelectMenu.SaveGameData GetCustomSaveData(RainWorld rainWorld, string name, int slot)
         {
-            if (!HasCustomSaveData(name, slot)) return null;
+            MineSaveData(rainWorld, name, slot, false, out var vanilla, out _, out _);
+            return vanilla;
+        }
 
-            string saveData = File.ReadAllText(GetSaveFilePath(name, slot));
+        /// <summary>
+        /// Gets a summary of the content in a SlugBase character's save file, including data saved using <see cref="CustomSaveState"/>.
+        /// </summary>
+        /// <param name="rainWorld">The current <see cref="RainWorld"/> instance.</param>
+        /// <param name="name">The name of the SlugBase character.</param>
+        /// <param name="slot">The game's current save slot.</param>
+        /// <returns>A summary of the given character's save file or null if the file could not be found.</returns>
+        public static SlugBaseSaveSummary GetSaveSummary(RainWorld rainWorld, string name, int slot)
+        {
+            if (!MineSaveData(rainWorld, name, slot, true, out var vanilla, out var custom, out var customPersistent)) return null;
+            return new SlugBaseSaveSummary(vanilla, custom, customPersistent);
+        }
 
+        private static bool MineSaveData(RainWorld rainWorld, string name, int slot, bool mineCustom, out SlugcatSelectMenu.SaveGameData vanilla, out Dictionary<string, string> custom, out Dictionary<string, string> customPersistent)
+        {
+            vanilla = null;
+            custom = null;
+            customPersistent = null;
+
+            string saveData;
+            try
+            {
+                saveData = File.ReadAllText(GetSaveFilePath(name, slot));
+            }
+            catch
+            {
+                return false;
+            }
+
+            // Mine vanilla data
             List<SaveStateMiner.Target> targets = new List<SaveStateMiner.Target>();
             targets.Add(new SaveStateMiner.Target(">DENPOS", "<svB>", "<svA>", 20));
             targets.Add(new SaveStateMiner.Target(">CYCLENUM", "<svB>", "<svA>", 50));
@@ -296,8 +327,14 @@ namespace SlugBase
             targets.Add(new SaveStateMiner.Target(">REDEXTRACYCLES", null, "<svA>", 20));
             targets.Add(new SaveStateMiner.Target(">ASCENDED", null, "<dpA>", 20));
 
+            if (mineCustom)
+            {
+                targets.Add(new SaveStateMiner.Target(">SLUGBASE", "<svB>", "<svA>", int.MaxValue / 4));
+                targets.Add(new SaveStateMiner.Target(">SLUGBASEPERSISTENT", "<svB>", "<svA>", int.MaxValue / 4));
+            }
+
             List<SaveStateMiner.Result> results = SaveStateMiner.Mine(rainWorld, saveData, targets);
-            SlugcatSelectMenu.SaveGameData saveGameData = new SlugcatSelectMenu.SaveGameData();
+            vanilla = new SlugcatSelectMenu.SaveGameData();
 
             for (int i = 0; i < results.Count; i++)
             {
@@ -307,37 +344,43 @@ namespace SlugBase
                     switch (targetName)
                     {
                         case ">DENPOS":
-                            saveGameData.shelterName = results[i].data;
+                            vanilla.shelterName = results[i].data;
                             break;
                         case ">CYCLENUM":
-                            saveGameData.cycle = int.Parse(results[i].data);
+                            vanilla.cycle = int.Parse(results[i].data);
                             break;
                         case ">FOOD":
-                            saveGameData.food = int.Parse(results[i].data);
+                            vanilla.food = int.Parse(results[i].data);
                             break;
                         case ">HASTHEGLOW":
-                            saveGameData.hasGlow = true;
+                            vanilla.hasGlow = true;
                             break;
                         case ">REINFORCEDKARMA":
-                            saveGameData.karmaReinforced = (results[i].data == "1");
+                            vanilla.karmaReinforced = (results[i].data == "1");
                             break;
                         case ">KARMA":
-                            saveGameData.karma = int.Parse(results[i].data);
+                            vanilla.karma = int.Parse(results[i].data);
                             break;
                         case ">KARMACAP":
-                            saveGameData.karmaCap = int.Parse(results[i].data);
+                            vanilla.karmaCap = int.Parse(results[i].data);
                             break;
                         case ">HASTHEMARK":
-                            saveGameData.hasMark = true;
+                            vanilla.hasMark = true;
                             break;
                         case ">REDEXTRACYCLES":
-                            saveGameData.redsExtraCycles = true;
+                            vanilla.redsExtraCycles = true;
                             break;
                         case ">REDSDEATH":
-                            saveGameData.redsDeath = true;
+                            vanilla.redsDeath = true;
                             break;
                         case ">ASCENDED":
-                            saveGameData.ascended = true;
+                            vanilla.ascended = true;
+                            break;
+                        case ">SLUGBASE":
+                            custom = CustomSaveState.DataFromString(results[i].data);
+                            break;
+                        case ">SLUGBASEPERSISTENT":
+                            customPersistent = CustomSaveState.DataFromString(results[i].data);
                             break;
                     }
                 }
@@ -346,7 +389,37 @@ namespace SlugBase
                     Debug.LogException(new Exception($"Failed to parse value from slugbase save (\"{name}\") for \"{targetName}\"!", e));
                 }
             }
-            return saveGameData;
+
+            return true;
+        }
+
+        /// <summary>
+        /// A summary of a <see cref="SlugBaseCharacter"/>'s save file including commonly used values
+        /// from the vanilla game and all data attached using a <see cref="CustomSaveState"/>.
+        /// </summary>
+        public class SlugBaseSaveSummary
+        {
+            /// <summary>
+            /// Commonly used values from the base game.
+            /// </summary>
+            public SlugcatSelectMenu.SaveGameData VanillaData { get; }
+
+            /// <summary>
+            /// Key-value pairs that would be passed to <see cref="CustomSaveState.Load(Dictionary{string, string})"/>.
+            /// </summary>
+            public Dictionary<string, string> CustomData { get; }
+
+            /// <summary>
+            /// Key-value pairs that would be passed to <see cref="CustomSaveState.LoadPermanent(Dictionary{string, string})"/>.
+            /// </summary>
+            public Dictionary<string, string> CustomPersistentData { get; }
+
+            internal SlugBaseSaveSummary(SlugcatSelectMenu.SaveGameData vanillaData, Dictionary<string, string> customData, Dictionary<string, string> customPersistent)
+            {
+                VanillaData = vanillaData;
+                CustomData = customData;
+                CustomPersistentData = customPersistent;
+            }
         }
     }
 }

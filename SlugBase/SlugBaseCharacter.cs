@@ -75,7 +75,7 @@ namespace SlugBase
         /// </summary>
         /// <remarks>
         /// Use this value only when absolutely necessary.
-        /// This may be -1, even when in a story game, and may change each time the game is launched.
+        /// This value may be reassigned between sessions or when in menus.
         /// </remarks>
         public int SlugcatIndex {
             get => slugcatIndex > -1 ? slugcatIndex : slugcatIndex = SlugBaseMod.FirstCustomIndex + PlayerManager.customPlayers.IndexOf(this);
@@ -309,6 +309,16 @@ namespace SlugBase
         /// to return a new instance of a child class of <see cref="CustomSaveState"/>.
         /// </remarks>
         public virtual CustomSaveState CreateNewSave(PlayerProgression progression) => new CustomSaveState(progression, this);
+
+        /// <summary>
+        /// Returns a summary of this character's save file or null if no save file exists.
+        /// </summary>
+        /// <param name="rainWorld">The current <see cref="RainWorld"/> instance.</param>
+        /// <returns></returns>
+        public SaveManager.SlugBaseSaveSummary GetSaveSummary(RainWorld rainWorld)
+        {
+            return SaveManager.GetSaveSummary(rainWorld, Name, rainWorld.options.saveSlot);
+        }
 
         /// <summary>
         /// The slugcat index to use for the world, such as placed object filters or creature spawns.

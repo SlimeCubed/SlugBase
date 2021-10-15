@@ -172,7 +172,7 @@ namespace SlugBase
             return DataToString(data);
         }
 
-        private static Dictionary<string, string> DataFromString(string dataString)
+        internal static Dictionary<string, string> DataFromString(string dataString)
         {
             var data = new Dictionary<string, string>();
             if (string.IsNullOrEmpty(dataString)) return data;
@@ -190,7 +190,7 @@ namespace SlugBase
             return data;
         }
 
-        private static string DataToString(Dictionary<string, string> data)
+        internal static string DataToString(Dictionary<string, string> data)
         {
             StringBuilder sb = new StringBuilder();
             foreach(var pair in data)

@@ -5,6 +5,7 @@
 		{"name":"Bg Plants.png", "x":488, "y":197, "depth":3.2},
 		{"name":"Sprinter.png", "x":516, "y":185, "depth":3.0, "shader":"LightEdges"},
 		{"name":"Hand.png", "x":687, "y":276, "depth":2.8, "shader":"LightEdges"},
+		{"name":".eyes red.png", "x":649, "y":334, "depth":3.0, "shader":"Basic", "turboonly":true},
 		{"name":"Spores.png", "x":487, "y":151, "depth":2, "shader":"Overlay"},
 		{"name":"Plants.png", "x":301, "y":18, "depth":1.5}
 	],

@@ -95,8 +95,7 @@ namespace SlugBase
                         ascended        = save.deathPersistentSaveData.ascended
                     };
                 }
-                int slot = manager.rainWorld.options.saveSlot;
-                return SaveManager.GetCustomSaveData(manager.rainWorld, ply.Name, slot);
+                return SaveManager.GetCustomSaveData(manager.rainWorld, ply.Name, manager.rainWorld.options.saveSlot);
             }
             return orig(manager, slugcat);
         }
@@ -216,10 +215,14 @@ namespace SlugBase
         private static void HoldButton_ctor(On.Menu.HoldButton.orig_ctor orig, HoldButton self, Menu.Menu menu, MenuObject owner, string displayText, string singalText, Vector2 pos, float fillTime)
         {
             if (selectMenuShimActive && singalText == "START" && menu is SlugcatSelectMenu ssm)
+            {
                 AddSlugBaseScenes(ssm);
+                selectMenuShimActive = false;
+            }
             orig(self, menu, owner, displayText, singalText, pos, fillTime);
         }
 
+        // Add all SlugBase characters to the select screen
         private static void AddSlugBaseScenes(SlugcatSelectMenu self)
         {
             int selectedSlugcat = self.manager.rainWorld.progression.miscProgressionData.currentlySelectedSinglePlayerSlugcat;
@@ -227,23 +230,11 @@ namespace SlugBase
             List<SlugBaseCharacter> plys = PlayerManager.customPlayers;
             int origLength = self.slugcatColorOrder.Length;
 
-            // Add all SlugBase characters to the select screen
-            // All other player mods should change this array, so we have a nice lower bound for indices we can take
-
-            // Find the next available slugcat index, skipping Nightcat
-            ref int firstCustomIndex = ref SlugBaseMod.FirstCustomIndex;
-
-            firstCustomIndex = 4;
-
-            // Take color order into account
+            // First, try to find the highest taken slugcat index
             for (int i = 0; i < self.slugcatColorOrder.Length; i++)
-                firstCustomIndex = Math.Max(self.slugcatColorOrder[i] + 1, firstCustomIndex);
+                SlugBaseMod.FirstCustomIndex = Math.Max(self.slugcatColorOrder[i] + 1, SlugBaseMod.FirstCustomIndex);
 
-            // Take slugcat names into account
-            foreach (SlugcatStats.Name name in Enum.GetValues(typeof(SlugcatStats.Name)))
-                firstCustomIndex = Math.Max((int)name + 1, firstCustomIndex);
-
-            int nextCustomIndex = firstCustomIndex;
+            int nextCustomIndex = SlugBaseMod.FirstCustomIndex;
 
             // Add SlugBase characters to the page order and assign empty slots a default value
             Array.Resize(ref self.slugcatColorOrder, origLength + plys.Count);
@@ -253,7 +244,6 @@ namespace SlugBase
             for (int i = 0; i < plys.Count; i++)
             {
                 // Assign each player a unique index, then save it to the page order
-                // This will cause weird behavior if the user skips over the title screen using EDT, so... don't do that
                 self.slugcatColorOrder[origLength + i] = nextCustomIndex;
                 plys[i].SlugcatIndex = nextCustomIndex++;
             }

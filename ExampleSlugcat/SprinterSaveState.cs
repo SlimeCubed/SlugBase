@@ -16,6 +16,8 @@ namespace ExampleSlugcat
 
         public override void Load(Dictionary<string, string> data)
         {
+            isTurbo = false;
+
             try
             {
                 foreach (var pair in data)
