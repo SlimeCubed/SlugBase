@@ -311,6 +311,12 @@ namespace SlugBase
         public virtual CustomSaveState CreateNewSave(PlayerProgression progression) => new CustomSaveState(progression, this);
 
         /// <summary>
+        /// Determines whether this character should be shown on the select screen, shown on the select screen but not able to be chosen, or hidden completely.
+        /// This is checked once when the select menu is first opened.
+        /// </summary>
+        public virtual SelectMenuAccessibility SelectMenuState => SelectMenuAccessibility.Available;
+
+        /// <summary>
         /// Returns a summary of this character's save file or null if no save file exists.
         /// </summary>
         /// <param name="rainWorld">The current <see cref="RainWorld"/> instance.</param>
@@ -327,6 +333,25 @@ namespace SlugBase
         /// This may be set through the <c>useSpawns</c> parameter of <see cref="SlugBaseCharacter(string, FormatVersion, int)"/>.
         /// </remarks>
         public int WorldCharacter => useSpawns;
+
+        /// <summary>
+        /// Describes if a character should be shown on the character select menu and whether it should be selectable.
+        /// </summary>
+        public enum SelectMenuAccessibility
+        {
+            /// <summary>
+            /// This character is shown and can be selected.
+            /// </summary>
+            Available,
+            /// <summary>
+            /// This character is shown but may not be selected. Consider overriding <see cref="BuildScene(string)"/> to replace images in "SelectMenu" with greyed-out versions.
+            /// </summary>
+            Locked,
+            /// <summary>
+            /// This character does not have an entry on the select menu.
+            /// </summary>
+            Hidden
+        }
 
         //////////////////////////
         // SCENES AND RESOURCES //

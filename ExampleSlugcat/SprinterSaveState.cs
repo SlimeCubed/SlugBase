@@ -27,7 +27,8 @@ namespace ExampleSlugcat
                         case "turbo": isTurbo = bool.Parse(pair.Value); break;
                     }
                 }
-            } catch(Exception e)
+            }
+            catch(Exception e)
             {
                 throw new FormatException("Failed to load Sprinter save!", e);
             }

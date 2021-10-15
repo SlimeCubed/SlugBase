@@ -9,6 +9,7 @@ using System.IO;
 using Menu;
 using HUD;
 using System.Runtime.CompilerServices;
+using System.Linq;
 
 [module: UnverifiableCode]
 [assembly: SecurityPermission(SecurityAction.RequestMinimum, SkipVerification = true)]
@@ -30,6 +31,7 @@ namespace SlugBase
             );
             On.Menu.SlugcatSelectMenu.GetSaveGameData += SlugcatSelectMenu_GetSaveGameData;
             On.Menu.SlugcatSelectMenu.MineForSaveData += SlugcatSelectMenu_MineForSaveData;
+            On.Menu.SlugcatSelectMenu.Update += SlugcatSelectMenu_Update;
             On.Menu.SlugcatSelectMenu.ctor += SlugcatSelectMenu_ctor;
             On.Menu.HoldButton.ctor += HoldButton_ctor;
             On.Menu.SlugcatSelectMenu.SlugcatPage.AddImage += SlugcatPage_AddImage;
@@ -98,6 +100,22 @@ namespace SlugBase
                 return SaveManager.GetCustomSaveData(manager.rainWorld, ply.Name, manager.rainWorld.options.saveSlot);
             }
             return orig(manager, slugcat);
+        }
+
+        // Lock the select button when necessary
+        private static void SlugcatSelectMenu_Update(On.Menu.SlugcatSelectMenu.orig_Update orig, SlugcatSelectMenu self)
+        {
+            // This is before orig because it must fetch the character before scrolling logic applies
+            // Otherwise, there's a single frame where the button flashes
+            SlugBaseCharacter ply = PlayerManager.GetCustomPlayer(self.slugcatColorOrder[self.slugcatPageIndex]);
+
+            orig(self);
+
+            if (ply != null)
+            {
+                var btn = self.startButton.GetButtonBehavior;
+                btn.greyedOut = btn.greyedOut || ply.SelectMenuState != SlugBaseCharacter.SelectMenuAccessibility.Available;
+            }
         }
 
         // Change some data associated with custom slugcat pages
@@ -228,38 +246,36 @@ namespace SlugBase
             int selectedSlugcat = self.manager.rainWorld.progression.miscProgressionData.currentlySelectedSinglePlayerSlugcat;
 
             List<SlugBaseCharacter> plys = PlayerManager.customPlayers;
+            List<SlugBaseCharacter> visiblePlys = plys.Where(c => c.SelectMenuState != SlugBaseCharacter.SelectMenuAccessibility.Hidden).ToList();
+
             int origLength = self.slugcatColorOrder.Length;
 
             // First, try to find the highest taken slugcat index
             for (int i = 0; i < self.slugcatColorOrder.Length; i++)
                 SlugBaseMod.FirstCustomIndex = Math.Max(self.slugcatColorOrder[i] + 1, SlugBaseMod.FirstCustomIndex);
 
+            // Assign each character a unique index
             int nextCustomIndex = SlugBaseMod.FirstCustomIndex;
-
-            // Add SlugBase characters to the page order and assign empty slots a default value
-            Array.Resize(ref self.slugcatColorOrder, origLength + plys.Count);
-            for (int i = origLength; i < self.slugcatColorOrder.Length; i++)
-                self.slugcatColorOrder[i] = -1;
-
             for (int i = 0; i < plys.Count; i++)
-            {
-                // Assign each player a unique index, then save it to the page order
-                self.slugcatColorOrder[origLength + i] = nextCustomIndex;
                 plys[i].SlugcatIndex = nextCustomIndex++;
-            }
+
+            // Add SlugBase characters to the page order
+            Array.Resize(ref self.slugcatColorOrder, origLength + visiblePlys.Count);
+            for (int i = origLength; i < self.slugcatColorOrder.Length; i++)
+                self.slugcatColorOrder[i] = visiblePlys[i - origLength].SlugcatIndex;
 
             // Retrieve save data
-            Array.Resize(ref self.saveGameData, origLength + plys.Count);
+            Array.Resize(ref self.saveGameData, origLength + visiblePlys.Count);
 
-            for (int i = 0; i < plys.Count; i++)
+            for (int i = 0; i < visiblePlys.Count; i++)
             {
-                self.saveGameData[origLength + i] = SlugcatSelectMenu.MineForSaveData(self.manager, plys[i].SlugcatIndex);
+                self.saveGameData[origLength + i] = SlugcatSelectMenu.MineForSaveData(self.manager, visiblePlys[i].SlugcatIndex);
             }
 
             // Add a new page to the menu
-            Array.Resize(ref self.slugcatPages, origLength + plys.Count);
+            Array.Resize(ref self.slugcatPages, origLength + visiblePlys.Count);
 
-            for (int i = 0; i < plys.Count; i++)
+            for (int i = 0; i < visiblePlys.Count; i++)
             {
                 int o = origLength + i;
                 if (self.saveGameData[o] != null)
