@@ -114,7 +114,7 @@ namespace SlugBase
             if (ply != null)
             {
                 var btn = self.startButton.GetButtonBehavior;
-                btn.greyedOut = btn.greyedOut || ply.SelectMenuState != SlugBaseCharacter.SelectMenuAccessibility.Available;
+                btn.greyedOut = btn.greyedOut || ply.GetSelectMenuState(self) != SlugBaseCharacter.SelectMenuAccessibility.Available;
             }
         }
 
@@ -246,7 +246,7 @@ namespace SlugBase
             int selectedSlugcat = self.manager.rainWorld.progression.miscProgressionData.currentlySelectedSinglePlayerSlugcat;
 
             List<SlugBaseCharacter> plys = PlayerManager.customPlayers;
-            List<SlugBaseCharacter> visiblePlys = plys.Where(c => c.SelectMenuState != SlugBaseCharacter.SelectMenuAccessibility.Hidden).ToList();
+            List<SlugBaseCharacter> visiblePlys = plys.Where(c => c.GetSelectMenuState(self) != SlugBaseCharacter.SelectMenuAccessibility.Hidden).ToList();
 
             int origLength = self.slugcatColorOrder.Length;
 

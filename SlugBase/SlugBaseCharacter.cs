@@ -314,7 +314,7 @@ namespace SlugBase
         /// Determines whether this character should be shown on the select screen, shown on the select screen but not able to be chosen, or hidden completely.
         /// This is checked once when the select menu is first opened.
         /// </summary>
-        public virtual SelectMenuAccessibility SelectMenuState => SelectMenuAccessibility.Available;
+        public virtual SelectMenuAccessibility GetSelectMenuState(SlugcatSelectMenu menu) => SelectMenuAccessibility.Available;
 
         /// <summary>
         /// Returns a summary of this character's save file or null if no save file exists.
