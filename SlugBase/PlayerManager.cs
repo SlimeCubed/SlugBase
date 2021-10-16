@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
 using RWCustom;
 using UnityEngine;
 
@@ -85,6 +86,16 @@ namespace SlugBase
         public static SlugBaseCharacter GetCustomPlayer(int index)
         {
             return customPlayers.FirstOrDefault(s => s.SlugcatIndex == index);
+        }
+
+        /// <summary>
+        /// Checks if the given string can be used as <see cref="SlugBaseCharacter.Name"/>.
+        /// </summary>
+        /// <param name="name">The string to check.</param>
+        /// <returns>True if the string can be a name, false otherwise.</returns>
+        public static bool IsValidCharacterName(string name)
+        {
+            return !string.IsNullOrEmpty(name) && Regex.IsMatch(name, "^[\\w ]+$");
         }
 
         internal static void ApplyHooks()

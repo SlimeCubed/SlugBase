@@ -96,6 +96,19 @@ This is an example slugcat for the SlugBase framework.";
             // Make sure this is the right room
             if (room.abstractRoom.name != StartRoom) return;
 
+            var data = SaveManager.GetCharacterData(Name, room.game.rainWorld);
+
+            if (!data.TryGetValue("games", out string gamesStr)
+                || !int.TryParse(gamesStr, out int games))
+                games = 0;
+            games++;
+            data["games"] = games.ToString();
+            Debug.Log($"Started a new game! Total: {games}");
+
+            data = SaveManager.GetGlobalData(room.game.rainWorld);
+            Debug.Log($"Char B was unlocked: {data.ContainsKey("unlockCharB")}");
+            data["unlockCharB"] = "";
+
             room.AddObject(new SprinterStart(room));
         }
 

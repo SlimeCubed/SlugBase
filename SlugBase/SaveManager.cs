@@ -27,6 +27,9 @@ namespace SlugBase
     /// </remarks>
     public static class SaveManager
     {
+        private static Dictionary<string, string> globalData;
+        private static readonly Dictionary<string, Dictionary<string, string>> characterData = new Dictionary<string, Dictionary<string, string>>();
+
         internal static void ApplyHooks()
         {
             On.PlayerProgression.WipeAll += PlayerProgression_WipeAll;
@@ -40,8 +43,14 @@ namespace SlugBase
             Directory.CreateDirectory(GetSaveFileDirectory());
         }
 
+        #region Hooks
+
+        // Wipes everything associated with a save slot
         private static void PlayerProgression_WipeAll(On.PlayerProgression.orig_WipeAll orig, PlayerProgression self)
         {
+            globalData = null;
+            characterData.Clear();
+
             orig(self);
             string[] files = Directory.GetFiles(GetSaveFileDirectory(), $"*-{self.rainWorld.options.saveSlot}.txt");
             for (int i = 0; i < files.Length; i++)
@@ -78,7 +87,7 @@ namespace SlugBase
 
             List<SaveStateMiner.Target> targets = new List<SaveStateMiner.Target>();
             targets.Add(new SaveStateMiner.Target(">DENPOS", "<svB>", "<svA>", 20));
-            
+
             List<SaveStateMiner.Result> results = SaveStateMiner.Mine(self.rainWorld, saveText, targets);
             if (results.Count > 0 && results[0].data != null)
                 return results[0].data;
@@ -90,6 +99,8 @@ namespace SlugBase
         // ... write to a separate file instead
         private static void PlayerProgression_SaveToDisk(On.PlayerProgression.orig_SaveToDisk orig, PlayerProgression self, bool saveCurrentState, bool saveMaps, bool saveMiscProg)
         {
+            WriteDataToDisk(self.rainWorld);
+
             if (!saveCurrentState || !(self.currentSaveState is CustomSaveState css))
             {
                 orig(self, saveCurrentState, saveMaps, saveMiscProg);
@@ -107,6 +118,8 @@ namespace SlugBase
         // Update a file on the disk with the current save-persistent data
         private static void PlayerProgression_SaveDeathPersistentDataOfCurrentState(On.PlayerProgression.orig_SaveDeathPersistentDataOfCurrentState orig, PlayerProgression self, bool saveAsIfPlayerDied, bool saveAsIfPlayerQuit)
         {
+            WriteDataToDisk(self.rainWorld);
+
             int slot = self.rainWorld.options.saveSlot;
             SlugBaseCharacter ply = null;
             if (self.currentSaveState != null) ply = PlayerManager.GetCustomPlayer(self.currentSaveState.saveStateNumber);
@@ -226,6 +239,8 @@ namespace SlugBase
             return orig(self, saveStateNumber);
         }
 
+        #endregion Hooks
+
         /// <summary>
         /// Gets the path that contains all SlugBase character save files.
         /// </summary>
@@ -245,7 +260,7 @@ namespace SlugBase
         /// Gets the path to a specific SlugBase character's save file.
         /// </summary>
         /// <param name="name">The name of the SlugBase character.</param>
-        /// <param name="slot">The game's current save slot.</param>
+        /// <param name="slot">The save slot to get the path for.</param>
         /// <returns>An absolute path to the save file.</returns>
         public static string GetSaveFilePath(string name, int slot)
         {
@@ -258,6 +273,156 @@ namespace SlugBase
                 slot,
                 ".txt"
             });
+        }
+
+        /// <summary>
+        /// Gets the path to a specific SlugBase character's data file used by <see cref="GetCharacterData(string, int)"/>.
+        /// </summary>
+        /// <param name="name">The name of the SlugBase character.</param>
+        /// <param name="slot">The save slot to get the path for.</param>
+        /// <returns>An absolute path to the data file.</returns>
+        public static string GetCharacterDataPath(string name, int slot)
+        {
+            if (!PlayerManager.IsValidCharacterName(name))
+                throw new ArgumentException("Invalid SlugBaseCharacter name!", nameof(name));
+
+            // UserData\data-Player Name-0.txt
+            return string.Concat(new object[]
+            {
+                GetSaveFileDirectory(),
+                "data-",
+                name,
+                "-",
+                slot,
+                ".txt"
+            });
+        }
+
+        /// <summary>
+        /// Gets the path to the global data file used by <see cref="GetGlobalData(int)"/>.
+        /// </summary>
+        /// <param name="slot">The save slot to get data for.</param>
+        /// <returns>An absolute path to the data file.</returns>
+        public static string GetGlobalDataPath(int slot)
+        {
+            // UserData\data-global-0.txt
+            return string.Concat(new object[]
+            {
+                GetSaveFileDirectory(),
+                "data-global-",
+                slot,
+                ".txt"
+            });
+        }
+
+        /// <summary>
+        /// Gets a persistent set of key-value pairs.
+        /// This persists on death, between sessions, and between resets.
+        /// It is cleared only when the entire save slot is cleared.
+        /// </summary>
+        /// <param name="slot">The save slot to get data for.</param>
+        /// <returns>A set of persistent key-value pairs.</returns>
+        public static Dictionary<string, string> GetGlobalData(int slot)
+        {
+            if (globalData == null)
+            {
+                globalData = new Dictionary<string, string>();
+
+                // Load global data
+                try
+                {
+                    var lines = File.ReadAllLines(GetGlobalDataPath(slot));
+                    for(int i = 0; i < lines.Length; i += 2)
+                        globalData[Unescape(lines[i])] = Unescape(lines[i + 1]);
+                }
+                catch { }
+            }
+            return globalData;
+        }
+
+        /// <summary>
+        /// Gets a persistent set of key-value pairs.
+        /// This persists on death, between sessions, and between resets.
+        /// It is cleared only when the entire save slot is cleared.
+        /// </summary>
+        /// <param name="rainWorld">The current <see cref="RainWorld"/> instance.</param>
+        /// <returns>A set of persistent key-value pairs.</returns>
+        public static Dictionary<string, string> GetGlobalData(RainWorld rainWorld) => GetGlobalData(rainWorld.options.saveSlot);
+
+        /// <summary>
+        /// Gets a set of key-value pairs associated with a <see cref="SlugBaseCharacter"/>.
+        /// This persists on death, between sessions, and between resets.
+        /// It is cleared only when the entire save slot is cleared.
+        /// </summary>
+        /// <param name="name">The <see cref="SlugBaseCharacter.Name"/> of the character to get data for.</param>
+        /// <param name="slot">The save slot to get data for.</param>
+        /// <returns>A set of persistent key-value pairs.</returns>
+        public static Dictionary<string, string> GetCharacterData(string name, int slot)
+        {
+            if (!characterData.TryGetValue(name, out var data))
+            {
+                data = new Dictionary<string, string>();
+                characterData[name] = data;
+                try
+                {
+                    var lines = File.ReadAllLines(GetCharacterDataPath(name, slot));
+                    for (int i = 0; i < lines.Length; i += 2)
+                        data[Unescape(lines[i])] = Unescape(lines[i + 1]);
+                }
+                catch { }
+            }
+
+            return data;
+        }
+
+        /// <summary>
+        /// Gets a set of key-value pairs associated with a <see cref="SlugBaseCharacter"/>.
+        /// This persists on death, between sessions, and between resets.
+        /// It is cleared only when the entire save slot is cleared.
+        /// </summary>
+        /// <param name="name">The <see cref="SlugBaseCharacter.Name"/> of the character to get data for.</param>
+        /// <param name="rainWorld">The current <see cref="RainWorld"/> instance.</param>
+        /// <returns>A set of persistent key-value pairs.</returns>
+        public static Dictionary<string, string> GetCharacterData(string name, RainWorld rainWorld) => GetCharacterData(name, rainWorld.options.saveSlot);
+
+        /// <summary>
+        /// Writes all modified values from <see cref="GetCharacterData(string, int)"/> and <see cref="GetGlobalData(int)"/> to files.
+        /// This will happen automatically if the program is closed normally, but it may be called manually to stop save scumming.
+        /// </summary>
+        /// <param name="rainWorld">The current <see cref="RainWorld"/> instance.</param>
+        public static void WriteDataToDisk(RainWorld rainWorld)
+        {
+            int slot = rainWorld.options.saveSlot;
+
+            // Global data
+            if (globalData != null)
+            {
+                using (var file = new StreamWriter(File.OpenWrite(GetGlobalDataPath(slot))))
+                {
+                    foreach (var pair in globalData)
+                    {
+                        file.Write(Escape(pair.Key));
+                        file.Write(Environment.NewLine);
+                        file.Write(Escape(pair.Value));
+                        file.Write(Environment.NewLine);
+                    }
+                }
+            }
+
+            // Character-specific data
+            foreach(var charData in characterData)
+            {
+                using (var file = new StreamWriter(File.OpenWrite(GetCharacterDataPath(charData.Key, slot))))
+                {
+                    foreach(var pair in charData.Value)
+                    {
+                        file.Write(Escape(pair.Key));
+                        file.Write(Environment.NewLine);
+                        file.Write(Escape(pair.Value));
+                        file.Write(Environment.NewLine);
+                    }
+                }
+            }
         }
 
         /// <summary>
@@ -391,6 +556,43 @@ namespace SlugBase
             }
 
             return true;
+        }
+
+        private static string Escape(string value)
+        {
+            value = value.Replace("\\", "\\\\");
+            value = value.Replace("\r", "\\r");
+            value = value.Replace("\n", "\\n");
+            return value;
+        }
+
+        private static string Unescape(string value)
+        {
+            StringBuilder sb = new StringBuilder(value.Length);
+            int i = 0;
+            bool escape = false;
+            while (i < value.Length)
+            {
+                char c = value[i];
+                if (escape)
+                {
+                    escape = false;
+                    switch (c)
+                    {
+                        case '\\': sb.Append('\\'); break;
+                        case 'r': sb.Append('\r'); break;
+                        case 'n': sb.Append('\n'); break;
+                        default: sb.Append(c); break;
+                    }
+                }
+                else
+                {
+                    if (c == '\\') escape = true;
+                    else sb.Append(c);
+                }
+                i++;
+            }
+            return sb.ToString();
         }
 
         /// <summary>

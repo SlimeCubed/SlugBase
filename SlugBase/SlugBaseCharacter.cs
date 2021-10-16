@@ -44,10 +44,9 @@ namespace SlugBase
         /// <exception cref="ArgumentException">Thrown when input name is empty or contains illegal characters.</exception>
         public SlugBaseCharacter(string name, FormatVersion version, int useSpawns = 0)
         {
-            Name = "NULL";
             if (name == null) throw new ArgumentNullException("Name may not be null.", nameof(name));
             if (name == "") throw new ArgumentException("Name may not be empty.", nameof(name));
-            if (!Regex.IsMatch(name, "^[\\w ]+$")) throw new ArgumentException("Name must contain only alphanumericals, underscores, and spaces.", nameof(name));
+            if (!PlayerManager.IsValidCharacterName(name)) throw new ArgumentException("Name must contain only alphanumericals, underscores, and spaces.", nameof(name));
             Name = name;
 
             this.useSpawns = useSpawns;
