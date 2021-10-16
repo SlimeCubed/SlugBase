@@ -10,6 +10,7 @@ using Menu;
 using HUD;
 using System.Runtime.CompilerServices;
 using System.Linq;
+using RWCustom;
 
 [module: UnverifiableCode]
 [assembly: SecurityPermission(SecurityAction.RequestMinimum, SkipVerification = true)]
@@ -21,6 +22,7 @@ namespace SlugBase
     internal static class SelectMenu
     {
         private static bool selectMenuShimActive = false;
+        private static float altRestartUp = 0f;
 
         public static void ApplyHooks()
         {
@@ -109,12 +111,38 @@ namespace SlugBase
             // Otherwise, there's a single frame where the button flashes
             SlugBaseCharacter ply = PlayerManager.GetCustomPlayer(self.slugcatColorOrder[self.slugcatPageIndex]);
 
-            orig(self);
-
-            if (ply != null)
+            if (ply == null)
             {
-                var btn = self.startButton.GetButtonBehavior;
-                btn.greyedOut = btn.greyedOut || ply.GetSelectMenuState(self) != SlugBaseCharacter.SelectMenuAccessibility.Available;
+                altRestartUp = 0f;
+                orig(self);
+            }
+            else
+            {
+                var state = ply.GetSelectMenuState(self);
+
+                if (state == SlugBaseCharacter.SelectMenuAccessibility.MustRestart && !self.restartAvailable)
+                {
+                    altRestartUp = Mathf.Max(self.restartUp, Custom.LerpAndTick(altRestartUp, 1f, 0.07f, 0.025f));
+                    self.restartUp = altRestartUp;
+                    if (altRestartUp == 1f)
+                        self.restartAvailable = true;
+                }
+                else
+                    altRestartUp = 0f;
+
+                orig(self);
+
+                bool locked = false;
+                switch (state)
+                {
+                    case SlugBaseCharacter.SelectMenuAccessibility.Locked: locked = true; break;
+                    case SlugBaseCharacter.SelectMenuAccessibility.Hidden: locked = true; break;
+                    case SlugBaseCharacter.SelectMenuAccessibility.MustRestart: locked = !self.restartChecked; break;
+                }
+
+                if (locked) self.startButton.GetButtonBehavior.greyedOut = true;
+
+                
             }
         }
 

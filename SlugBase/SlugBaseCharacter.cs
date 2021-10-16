@@ -311,7 +311,7 @@ namespace SlugBase
 
         /// <summary>
         /// Determines whether this character should be shown on the select screen, shown on the select screen but not able to be chosen, or hidden completely.
-        /// This is checked once when the select menu is first opened.
+        /// If a character switched to hidden while the select menu is open then it will act like it is locked.
         /// </summary>
         public virtual SelectMenuAccessibility GetSelectMenuState(SlugcatSelectMenu menu) => SelectMenuAccessibility.Available;
 
@@ -349,7 +349,11 @@ namespace SlugBase
             /// <summary>
             /// This character does not have an entry on the select menu.
             /// </summary>
-            Hidden
+            Hidden,
+            /// <summary>
+            /// This character is shown, but the save must be reset to start a game.
+            /// </summary>
+            MustRestart
         }
 
         //////////////////////////
