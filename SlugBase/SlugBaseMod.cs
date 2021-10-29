@@ -8,7 +8,7 @@ namespace SlugBase
 {
     internal class SlugBaseMod : PartialityMod
     {
-        public const string versionString = "1.2.0-beta1";
+        public const string versionString = "1.2.0-beta2";
 
         // AutoUpdate support
         public string updateURL = "http://beestuff.pythonanywhere.com/audb/api/mods/6/0";
@@ -47,6 +47,9 @@ namespace SlugBase
              * TODO:
              * 
              * Scene editor (maybe)
+             * SlugBase filtered spawns (needs testing)
+             * SlugBase filtered placed objects
+             * Wiki page for region modders
              * 
              */
         }
@@ -65,6 +68,7 @@ namespace SlugBase
             //SceneEditor.ApplyHooks();
             SelectMenu.ApplyHooks();
             ShelterScreens.ApplyHooks();
+            RegionTools.ApplyHooks();
             WorldFixes.ApplyHooks();
 
             On.RainWorld.Start += RainWorld_Start;

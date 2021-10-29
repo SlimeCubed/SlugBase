@@ -72,6 +72,7 @@
     <Compile Include="Scenes\SceneEditor.cs" />
     <Compile Include="Scenes\ShelterScreens.cs" />
     <Compile Include="SlugBaseEx.cs" />
+    <Compile Include="RegionTools.cs" />
     <Compile Include="WorldFixes.cs" />
     <Compile Include="SaveManager.cs" />
     <Compile Include="Scenes\CustomSceneManager.cs" />
