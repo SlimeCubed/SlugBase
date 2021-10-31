@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Linq;
 using System.Collections.Generic;
 using UnityEngine;
@@ -12,11 +13,13 @@ namespace SlugBase
     // Allow modded regions to change their behavior by character name
     internal static class RegionTools
     {
-        private static AttachedField<RoomSettings, SupplementaryRoomSettings> supplementarySettings = new AttachedField<RoomSettings, SupplementaryRoomSettings>();
-        private static readonly string[] spawnLineSplit = new string[] { " : " };
+        private static readonly AttachedField<RoomSettings, SupplementaryRoomSettings> supplementarySettings = new AttachedField<RoomSettings, SupplementaryRoomSettings>();
+        private static readonly Dictionary<WorldLoader, List<WorldCoordinate>> forbiddenDens = new Dictionary<WorldLoader, List<WorldCoordinate>>();
+        private static readonly Dictionary<WorldLoader, List<World.CreatureSpawner>> replacementSpawners = new Dictionary<WorldLoader, List<World.CreatureSpawner>>();
 
         public static void ApplyHooks()
         {
+            On.WorldLoader.NextActivity += WorldLoader_NextActivity;
             On.WorldLoader.FindingCreatures += WorldLoader_FindingCreatures;
             On.RoomSettings.Load += RoomSettings_Load;
             On.RoomSettings.Save += RoomSettings_Save;
@@ -32,7 +35,7 @@ namespace SlugBase
             newLine = line;
 
             string charName = PlayerManager.CurrentCharacter?.Name;
-            var args = line.Split(spawnLineSplit, StringSplitOptions.RemoveEmptyEntries);
+            var args = Regex.Split(line, " : ");
 
             if (args.Length == 0)
                 return true;
@@ -121,14 +124,97 @@ namespace SlugBase
 
         #region Hooks
 
-        // Remove creature lines that before they are used
+        // Finalize spawn replacement logic
+        private static void WorldLoader_NextActivity(On.WorldLoader.orig_NextActivity orig, WorldLoader self)
+        {
+            if (self.activity == WorldLoader.Activity.FindingCreatures)
+            {
+                forbiddenDens.TryGetValue(self, out var selfForbiddenDens);
+                replacementSpawners.TryGetValue(self, out var selfReplacementSpawners);
+
+                // Remove all from forbidden dens except for replacement spawns
+                if (selfForbiddenDens != null)
+                    self.spawners.RemoveAll(spawner => selfForbiddenDens.Contains(spawner.den) && !(selfReplacementSpawners?.Contains(spawner) ?? false));
+
+                forbiddenDens.Remove(self);
+                replacementSpawners.Remove(self);
+            }
+            orig(self);
+        }
+
+        // Filter creature lines by SlugBase character before they are used
+        // Remove previous den contents when the REPLACE tag is used
         private static void WorldLoader_FindingCreatures(On.WorldLoader.orig_FindingCreatures orig, WorldLoader self)
         {
             var line = self.lines[self.cntr];
+
             if (ShouldKeepLine(line, out var newLine))
             {
+                string[] args = Regex.Split(newLine, " : ");
+                bool replace = args.Length > 0 && args[0].EndsWith("_REPLACE");
+
+                if(replace)
+                {
+                    args[0] = args[0].Replace("_REPLACE", "");
+                    newLine = newLine.Replace("_REPLACE", "");
+                }
+
+                int spawnerCount = self.spawners.Count;
+
                 self.lines[self.cntr] = newLine;
                 orig(self);
+
+                // If the REPLACE tag is used, mark all dens that the added spawners occupy as forbidden
+                if(replace && args.Length >= 2)
+                {
+                    if(!forbiddenDens.TryGetValue(self, out var selfForbiddenDens))
+                    {
+                        selfForbiddenDens = new List<WorldCoordinate>();
+                        forbiddenDens[self] = selfForbiddenDens;
+                    }
+
+                    if(args[0] != "LINEAGE")
+                    {
+                        // Find room index
+                        int roomIndex = -1;
+                        if (args[0] == "OFFSCREEN")
+                        {
+                            roomIndex = self.world.firstRoomIndex + self.roomAdder.Count;
+                        }
+                        else
+                        {
+                            int num2 = 0;
+                            while (num2 < self.roomAdder.Count && roomIndex < 0)
+                            {
+                                if (self.roomAdder[num2][0] == args[0])
+                                {
+                                    roomIndex = self.world.firstRoomIndex + num2;
+                                }
+                                num2++;
+                            }
+                        }
+
+                        // Find world coordinates of empty dens
+                        foreach (string spawn in Regex.Split(args[1], ", "))
+                        {
+                            string[] spawnArgs = spawn.Split('-');
+                            if (spawnArgs.Length >= 2 && spawnArgs[1] == "None" && int.TryParse(spawnArgs[0], out int denNumber))
+                                selfForbiddenDens.Add(new WorldCoordinate(roomIndex, -1, -1, denNumber));
+                        }
+                    }
+
+                    // Add to forbidden dens and mark the added spawners as safe
+                    if(!replacementSpawners.TryGetValue(self, out var selfReplacementSpawners))
+                    {
+                        selfReplacementSpawners = new List<World.CreatureSpawner>();
+                        replacementSpawners[self] = selfReplacementSpawners;
+                    }
+                    for (int i = spawnerCount; i < self.spawners.Count; i++)
+                    {
+                        selfForbiddenDens.Add(self.spawners[i].den);
+                        selfReplacementSpawners.Add(self.spawners[i]);
+                    }
+                }
             }
         }
 
