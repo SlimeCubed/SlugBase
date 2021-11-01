@@ -151,11 +151,14 @@ namespace SlugBase
             if (ShouldKeepLine(line, out var newLine))
             {
                 string[] args = Regex.Split(newLine, " : ");
-                bool replace = args.Length > 0 && args[0].EndsWith("_REPLACE");
+                bool replace = args.Length > 1 && (args[0] == "LINEAGE" ? args[1] : args[0]).EndsWith("_REPLACE");
 
                 if(replace)
                 {
-                    args[0] = args[0].Replace("_REPLACE", "");
+                    if (args[0] == "LINEAGE")
+                        args[1] = args[1].Replace("_REPLACE", "");
+                    else
+                        args[0] = args[0].Replace("_REPLACE", "");
                     newLine = newLine.Replace("_REPLACE", "");
                 }
 
