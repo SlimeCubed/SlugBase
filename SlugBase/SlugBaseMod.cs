@@ -59,8 +59,6 @@ namespace SlugBase
             Compatibility.FlatmodeFix.Apply();
             Compatibility.HookGenFix.Apply();
 
-            Testing.ApplyHooks();
-
             // Core changes
             ArenaAdditions.ApplyHooks();
             CustomSceneManager.ApplyHooks();
