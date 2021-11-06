@@ -17,13 +17,14 @@ namespace SlugBase
     /// </summary>
     public abstract class SlugBaseCharacter
     {
-        internal int useSpawns;
         // Try not to use this for anything saved!
         // This is for situations where an index is expected by the vanilla game or other mods
         internal FormatVersion version;
+        private int useSpawns;
         private int slugcatIndex = -1;
         private bool devMode;
         private EnabledState enabledState;
+        private int instanceCount; // The number of World and Player Chars using this
 
         /// <summary>
         /// Create a new custom character.
@@ -42,7 +43,29 @@ namespace SlugBase
         /// </remarks>
         /// <exception cref="ArgumentNullException">Thrown when input name is null.</exception>
         /// <exception cref="ArgumentException">Thrown when input name is empty or contains illegal characters.</exception>
-        public SlugBaseCharacter(string name, FormatVersion version, int useSpawns = 0)
+        public SlugBaseCharacter(string name, FormatVersion version, int useSpawns = 0) : this(name, version, useSpawns, false)
+        {
+        }
+
+        /// <summary>
+        /// Create a new custom character.
+        /// </summary>
+        /// <param name="name">The name of the custom character, containing only alphanumericals, underscores, and spaces.</param>
+        /// <param name="version">The version this mod was first built with.</param>
+        /// <param name="useSpawns">
+        /// The character to copy creatures and world state from.
+        /// The value should be 0 (survivor), 1 (monk) or 2 (hunter).
+        /// Values outside of this range are allowed, but the vanilla game's world files are not set up to use them correctly.
+        /// </param>
+        /// <param name="multiInstance">If true, then this character may exist in the same game as other <see cref="SlugBaseCharacter"/>s.</param>
+        /// <remarks>
+        /// The name of this character must be unique; other mods that add a character of this same name will throw an exception
+        /// when registering their character. If your name is likely to cause conflicts (such as any of the vanilla achievement
+        /// names), then consider prefixing your player's name with some other text, like the author's name.
+        /// </remarks>
+        /// <exception cref="ArgumentNullException">Thrown when input name is null.</exception>
+        /// <exception cref="ArgumentException">Thrown when input name is empty or contains illegal characters.</exception>
+        public SlugBaseCharacter(string name, FormatVersion version, int useSpawns, bool multiInstance)
         {
             if (name == null) throw new ArgumentNullException("Name may not be null.", nameof(name));
             if (name == "") throw new ArgumentException("Name may not be empty.", nameof(name));
@@ -51,6 +74,7 @@ namespace SlugBase
 
             this.useSpawns = useSpawns;
             this.version = version;
+            MultiInstance = multiInstance;
         }
 
         /// <summary>
@@ -86,13 +110,19 @@ namespace SlugBase
         //////////////
 
         /// <summary>
+        /// If true, then this character may exist in the same game as other <see cref="SlugBaseCharacter"/>s.
+        /// </summary>
+        public bool MultiInstance { get; }
+
+        /// <summary>
         /// The room that this player begins in when starting a new game.
         /// Any values other than null or "SU_C04" may need code to determine where to place the player.
         /// </summary>
         public virtual string StartRoom => null;
 
         /// <summary>
-        /// Called once as a game starts from the select screen or multiplayer menu.
+        /// Called once as soon as possible before a game starts.
+        /// If this is being used as the world character, then this will always be called before <see cref="RainWorldGame"/>'s constructor. Otherwise, it will be called immediately before <see cref="Enable"/>.
         /// </summary>
         /// <remarks>
         /// This is called as soon possible, the moment that user's character choice is locked in.
@@ -100,27 +130,74 @@ namespace SlugBase
         protected virtual void Prepare() { }
 
         /// <summary>
-        /// True if the current RainWorldGame instance is using this character.
+        /// True if this character is being used by any players or the world.
         /// </summary>
         public bool Enabled => enabledState == EnabledState.Enabled;
 
         /// <summary>
         /// Called once when a game is started as this character.
+        /// For <see cref="MultiInstance"/> characters, this method is called when any players
+        /// are this character or this character's world was loaded.
         /// </summary>
         protected abstract void Enable();
 
         /// <summary>
         /// Called once when a game is ended as this character.
+        /// For <see cref="MultiInstance"/> characters, this method is called once no more players
+        /// are using this character and this character's world is not loaded.
         /// </summary>
         protected abstract void Disable();
 
-        internal void EnableInternal()
+        /// <summary>
+        /// Returns whether the given <see cref="Player"/> instance is this character.
+        /// </summary>
+        /// <param name="player">The player to check.</param>
+        /// <returns>True if <paramref name="player"/> is this character.</returns>
+        public bool IsMe(Player player)
+        {
+            return PlayerManager.GetCustomPlayer(player) == this;
+        }
+
+        /// <summary>
+        /// Returns whether the given game's world is this character's.
+        /// </summary>
+        /// <param name="game">The game to check.</param>
+        /// <returns>True if world changes such as spawns and placed object filters use this character.</returns>
+        public bool IsMe(RainWorldGame game)
+        {
+            return PlayerManager.GetCustomPlayer(game) == this;
+        }
+
+        // Called when a World or Player Char starts using this
+        internal void EnableInstance()
+        {
+            Debug.Log($"Instance enabled: {Name}");
+            if (instanceCount == 0)
+                EnableInternal();
+            instanceCount++;
+        }
+
+        // Called when a World or Player Char stops using this
+        internal void DisableInstance()
+        {
+            Debug.Log($"Instance disabled: {Name}");
+            instanceCount--;
+            if (instanceCount == 0)
+                DisableInternal();
+            if (instanceCount < 0)
+            {
+                Debug.LogException(new Exception("More instances of a character were disabled than were enabled!"));
+                instanceCount = 0;
+            }
+        }
+
+        private void EnableInternal()
         {
             while (enabledState != EnabledState.Enabled)
                 NextState();
         }
 
-        internal void DisableInternal()
+        private void DisableInternal()
         {
             while (enabledState != EnabledState.Disabled)
                 NextState();
@@ -142,28 +219,19 @@ namespace SlugBase
                         enabledState = EnabledState.Prepared;
                         Prepare();
                         break;
+
                     case EnabledState.Prepared:
                         enabledState = EnabledState.Enabled;
-
-                        if (PlayerManager.CurrentCharacter != null)
-                            Debug.Log($"Character mismatch! Enabled \"{Name}\" while playing as \"{PlayerManager.CurrentCharacter.Name}\"!");
-                        PlayerManager.CurrentCharacter = this;
-
                         Enable();
                         break;
+
                     case EnabledState.Enabled:
                         enabledState = EnabledState.Disabled;
-                        
-                        if (PlayerManager.CurrentCharacter == this)
-                            PlayerManager.CurrentCharacter = null;
-                        else
-                            Debug.Log($"Character mismatch! Disabled \"{Name}\" while playing as \"{PlayerManager.CurrentCharacter?.Name ?? "None"}\"!");
-
                         Disable();
                         break;
                 }
             }
-            catch(Exception e)
+            catch (Exception e)
             {
                 Debug.LogException(new Exception($"Failed to change enabled state for SlugBase character \"{Name}\".", e));
             }
@@ -184,7 +252,6 @@ namespace SlugBase
         internal void GetStatsInternal(SlugcatStats stats)
         {
             stats.throwingSkill = stats.malnourished ? 0 : 1;
-            stats.name = (SlugcatStats.Name)SlugcatIndex;
             GetStats(stats);
         }
 
@@ -193,6 +260,15 @@ namespace SlugBase
         /// </summary>
         /// <param name="room">The room containing the player.</param>
         public virtual void StartNewGame(Room room)
+        {
+        }
+
+        /// <summary>
+        /// Called the first time each instance of this character is realized.
+        /// </summary>
+        /// <param name="game">The game <paramref name="player"/> was added to.</param>
+        /// <param name="player">A player that is an instance of this character.</param>
+        public virtual void PlayerAdded(RainWorldGame game, Player player)
         {
         }
 
@@ -288,13 +364,55 @@ namespace SlugBase
         /// Get the color used for this character's UI and in-game sprites.
         /// </summary>
         /// <returns>The color to use, or null to use the default for this save slot.</returns>
+        [Obsolete("Use SlugcatColor(int slugcatCharacter) instead.")]
         public virtual Color? SlugcatColor() => null;
+
+        /// <summary>
+        /// Get the color used for this character's UI and in-game sprites.
+        /// </summary>
+        /// <param name="slugcatCharacter">
+        /// The slugcat this player is set to appear as. This will be -1 in singleplayer and 0 to 3 in arena mode.
+        /// Other mods may pass in different values.
+        /// </param>
+        /// <returns>The color to use, or null to use the default for this save slot.</returns>
+        public virtual Color? SlugcatColor(int slugcatCharacter)
+        {
+#pragma warning disable CS0618 // Type or member is obsolete
+            return SlugcatColor();
+#pragma warning restore CS0618 // Type or member is obsolete
+        }
+
+        internal Color? SlugcatColorInternal(int slugcatCharacter)
+        {
+            return SlugcatColor(slugcatCharacter == SlugcatIndex ? -1 : slugcatCharacter);
+        }
 
         /// <summary>
         /// Gets the colors of this character's eyes.
         /// </summary>
         /// <returns>The color to use, or null to use the default for this save slot.</returns>
+        [Obsolete("Use SlugcatColor(int slugcatCharacter) instead.")]
         public virtual Color? SlugcatEyeColor() => null;
+
+        /// <summary>
+        /// Gets the colors of this character's eyes.
+        /// </summary>
+        /// <param name="slugcatCharacter">
+        /// The slugcat this player is set to appear as. This will be -1 in singleplayer and 0 to 3 in arena mode.
+        /// Other mods may pass in different values.
+        /// </param>
+        /// <returns>The color to use, or null to use the default for this save slot.</returns>
+        public virtual Color? SlugcatEyeColor(int slugcatCharacter)
+        {
+#pragma warning disable CS0618 // Type or member is obsolete
+            return SlugcatEyeColor();
+#pragma warning restore CS0618 // Type or member is obsolete
+        }
+
+        internal Color? SlugcatEyeColorInternal(int slugcatCharacter)
+        {
+            return SlugcatEyeColor(slugcatCharacter == SlugcatIndex ? -1 : slugcatCharacter);
+        }
 
         ///////////
         // SAVES //
@@ -326,12 +444,18 @@ namespace SlugBase
         }
 
         /// <summary>
+        /// This does the same as <see cref="InheritWorldFromSlugcat"/> and is marked as obsolete because it is confusingly named.
+        /// </summary>
+        [Obsolete("Use " + nameof(InheritWorldFromSlugcat) + " instead.")]
+        public int WorldCharacter => useSpawns;
+
+        /// <summary>
         /// The slugcat index to use for the world, such as placed object filters or creature spawns.
         /// </summary>
         /// <remarks>
         /// This may be set through the <c>useSpawns</c> parameter of <see cref="SlugBaseCharacter(string, FormatVersion, int)"/>.
         /// </remarks>
-        public int WorldCharacter => useSpawns;
+        public int InheritWorldFromSlugcat => useSpawns;
 
         /// <summary>
         /// Describes if a character should be shown on the character select menu and whether it should be selectable.

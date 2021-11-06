@@ -83,17 +83,7 @@ namespace SlugBase
         private static void SlideShow_ctor(On.Menu.SlideShow.orig_ctor orig, SlideShow self, ProcessManager manager, SlideShow.SlideShowID slideShowID)
         {
             // Automatically override slideshows if the current character has a slideshow by the same name
-            SlugBaseCharacter currentPlayer;
-            if (PlayerManager.UsingCustomCharacter) currentPlayer = PlayerManager.CurrentCharacter;
-            else
-            {
-                int index;
-                if (manager.currentMainLoop is RainWorldGame rwg)
-                    index = rwg.StoryCharacter;
-                else
-                    index = manager.rainWorld.progression.PlayingAsSlugcat;
-                currentPlayer = PlayerManager.GetCustomPlayer(index);
-            }
+            SlugBaseCharacter currentPlayer = PlayerManager.GetCustomPlayer(manager.rainWorld.progression.PlayingAsSlugcat);
 
             if (currentPlayer != null)
             {
@@ -242,17 +232,7 @@ namespace SlugBase
         private static void MenuScene_BuildScene(On.Menu.MenuScene.orig_BuildScene orig, MenuScene self)
         {
             // Automatically override scenes if the current character has a scene by the same name
-            SlugBaseCharacter currentPlayer;
-            if (PlayerManager.UsingCustomCharacter) currentPlayer = PlayerManager.CurrentCharacter;
-            else
-            {
-                int index;
-                if (self.menu.manager.currentMainLoop is RainWorldGame rwg)
-                    index = rwg.StoryCharacter;
-                else
-                    index = self.menu.manager.rainWorld.progression.PlayingAsSlugcat;
-                currentPlayer = PlayerManager.GetCustomPlayer(index);
-            }
+            SlugBaseCharacter currentPlayer = PlayerManager.GetCustomPlayer(self.menu.manager.rainWorld.progression.PlayingAsSlugcat);
 
             if (currentPlayer != null)
             {

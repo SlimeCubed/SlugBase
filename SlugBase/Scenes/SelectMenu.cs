@@ -153,7 +153,7 @@ namespace SlugBase
             SlugBaseCharacter ply = PlayerManager.GetCustomPlayer(pageIndex);
             if (ply != null) {
                 self.colorName = ply.Name;
-                self.effectColor = ply.SlugcatColor() ?? Color.white;
+                self.effectColor = ply.SlugcatColorInternal(slugcatNumber) ?? Color.white;
             }
         }
 

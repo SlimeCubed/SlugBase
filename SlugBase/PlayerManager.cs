@@ -14,9 +14,11 @@ namespace SlugBase
     /// </summary>
     public static class PlayerManager
     {
-        internal static List<SlugBaseCharacter> customPlayers = new List<SlugBaseCharacter>();
+        internal static readonly List<SlugBaseCharacter> customPlayers = new List<SlugBaseCharacter>();
+        private static readonly Dictionary<string, SlugBaseCharacter> customPlayersByName = new Dictionary<string, SlugBaseCharacter>();
+        private static readonly Dictionary<RainWorldGame, GameSetup> gameSetups = new Dictionary<RainWorldGame, GameSetup>();
+        internal static Player currentlyDrawingPlayer;
         internal static bool useOriginalColor;
-        private static Dictionary<string, SlugBaseCharacter> customPlayersByName = new Dictionary<string, SlugBaseCharacter>();
         private static SlugBaseCharacter currentPlayer;
 
         /// <summary>
@@ -28,6 +30,7 @@ namespace SlugBase
         /// The custom character that is being played in the current game.
         /// This will be null if there is not an ongoing game, or if the current character was not added through SlugBase.
         /// </summary>
+        [Obsolete("Use " + nameof(GetCustomPlayer) + " instead.")]
         public static SlugBaseCharacter CurrentCharacter
         {
             get => currentPlayer;
@@ -37,6 +40,7 @@ namespace SlugBase
         /// <summary>
         /// True if the current game session uses a player added by SlugBase.
         /// </summary>
+        [Obsolete("Check " + nameof(GetCustomPlayer) + " instead.")]
         public static bool UsingCustomCharacter => currentPlayer != null;
 
         /// <summary>
@@ -89,6 +93,51 @@ namespace SlugBase
         }
 
         /// <summary>
+        /// Gets the <see cref="SlugBaseCharacter"/> that this game's world is using, affecting things such as spawns and placed object filters.
+        /// </summary>
+        /// <param name="game">The game to check.</param>
+        /// <returns>The <see cref="SlugBaseCharacter"/> used for the world or <c>null</c> if a custom character is not being used.</returns>
+        public static SlugBaseCharacter GetCustomPlayer(RainWorldGame game)
+        {
+            if (game == null)
+                return null;
+
+            gameSetups.TryGetValue(game, out GameSetup setup);
+            return setup?.worldCharacter;
+        }
+
+        /// <summary>
+        /// Gets the <see cref="SlugBaseCharacter"/> that the given <see cref="Player"/> is an instance of.
+        /// </summary>
+        /// <param name="player">The player to check.</param>
+        /// <returns>The <see cref="SlugBaseCharacter"/> used for this player or <c>null</c> if a custom character is not being used.</returns>
+        public static SlugBaseCharacter GetCustomPlayer(Player player)
+        {
+            if (player == null) return null;
+
+            var game = player.abstractCreature.world.game;
+
+            var worldCha = GetCustomPlayer(game);
+            var playerCha = GetCustomPlayer((int)player.slugcatStats.name);
+
+            if(worldCha != null && !worldCha.MultiInstance)
+            {
+                return worldCha;
+            }
+            else
+            {
+                if (playerCha != null && !playerCha.MultiInstance && gameWithError?.Target != game)
+                {
+                    gameWithError = new WeakReference(game);
+                    Debug.LogException(new Exception($"Single-instance character \"{playerCha}\" is in a mismatched world, \"{worldCha?.Name ?? "VANILLA"}\"!"));
+                }
+
+                return playerCha;
+            }
+        }
+        private static WeakReference gameWithError;
+
+        /// <summary>
         /// Checks if the given string can be used as <see cref="SlugBaseCharacter.Name"/>.
         /// </summary>
         /// <param name="name">The string to check.</param>
@@ -100,8 +149,10 @@ namespace SlugBase
 
         internal static void ApplyHooks()
         {
+            On.AbstractCreature.Realize += AbstractCreature_Realize;
             On.Room.Loaded += Room_Loaded;
             On.ProcessManager.RequestMainProcessSwitch_1 += ProcessManager_RequestMainProcessSwitch_1;
+            On.ProcessManager.SwitchMainProcess += ProcessManager_SwitchMainProcess;
             On.WorldLoader.GeneratePopulation += WorldLoader_GeneratePopulation;
             On.SaveState.ctor += SaveState_ctor;
             On.TempleGuardAI.Update += TempleGuardAI_Update;
@@ -113,6 +164,8 @@ namespace SlugBase
             On.Player.CanEatMeat += Player_CanEatMeat;
             On.SlugcatStats.SlugcatFoodMeter += SlugcatStats_SlugcatFoodMeter;
             On.SlugcatStats.ctor += SlugcatStats_ctor;
+            On.PlayerGraphics.Update += PlayerGraphics_Update;
+            On.PlayerGraphics.DrawSprites += PlayerGraphics_DrawSprites;
             On.PlayerGraphics.ApplyPalette += PlayerGraphics_ApplyPalette;
             On.PlayerGraphics.SlugcatColor += PlayerGraphics_SlugcatColor;
             On.RainWorldGame.ctor += RainWorldGame_ctor;
@@ -121,23 +174,36 @@ namespace SlugBase
 
         #region HOOKS
 
+        private static void AbstractCreature_Realize(On.AbstractCreature.orig_Realize orig, AbstractCreature self)
+        {
+            orig(self);
+
+            if (self.realizedObject is Player ply)
+            {
+                Debug.Log($"Player realized! Num {ply.playerState.playerNumber}, name {ply.slugcatStats.name}, char {ply.playerState.slugcatCharacter}");
+                AddCustomPlayer(self.world.game, self, GetCustomPlayer(ply));
+            }
+        }
+
         private static void Room_Loaded(On.Room.orig_Loaded orig, Room self)
         {
-            if (UsingCustomCharacter && self.abstractRoom?.name is string roomName && self.abstractRoom.firstTimeRealized)
+            var cha = GetCustomPlayer(self.game);
+            if (cha != null && self.abstractRoom?.name is string roomName && self.abstractRoom.firstTimeRealized)
             {
                 orig(self);
 
                 if (self.game?.GetStorySession?.saveState is SaveState save && save.cycleNumber == 0 && save.denPosition == roomName) {
-                    CurrentCharacter.StartNewGame(self);
+                    cha.StartNewGame(self);
                 }
             }
             else orig(self);
         }
 
-        // Make sure Prepare is called consistently
+        // Call Prepare as early as possible
         private static void ProcessManager_RequestMainProcessSwitch_1(On.ProcessManager.orig_RequestMainProcessSwitch_1 orig, ProcessManager self, ProcessManager.ProcessID ID, float fadeOutSeconds)
         {
-            if (ID == ProcessManager.ProcessID.Game)
+            // Don't disable the world character if a game is in progress
+            if (ID == ProcessManager.ProcessID.Game && self.currentMainLoop?.ID != ProcessManager.ProcessID.Game)
             {
                 if (self.arenaSitting != null)
                 {
@@ -153,10 +219,30 @@ namespace SlugBase
             orig(self, ID, fadeOutSeconds);
         }
 
+        // Make sure Prepare is consistently called before RainWorldGame's constructor
+        private static void ProcessManager_SwitchMainProcess(On.ProcessManager.orig_SwitchMainProcess orig, ProcessManager self, ProcessManager.ProcessID ID)
+        {
+            if(ID == ProcessManager.ProcessID.Game)
+            {
+                if (self.arenaSitting != null)
+                {
+                    ArenaAdditions.PlayerDescriptor ply = ArenaAdditions.GetSelectedArenaCharacter(self.arenaSetup);
+                    if (ply.type == ArenaAdditions.PlayerDescriptor.Type.SlugBase)
+                        ply.player.PrepareInternal();
+                }
+                else
+                {
+                    GetCustomPlayer(self.rainWorld.progression.PlayingAsSlugcat)?.PrepareInternal();
+                }
+            }
+            orig(self, ID);
+        }
+
         // Stop Iggy from spawning in on request
         private static void WorldLoader_GeneratePopulation(On.WorldLoader.orig_GeneratePopulation orig, WorldLoader self, bool fresh)
         {
-            if (!UsingCustomCharacter || CurrentCharacter.HasGuideOverseer)
+            var cha = GetCustomPlayer(self.game);
+            if (cha == null || cha.HasGuideOverseer)
             {
                 orig(self, fresh);
                 return;
@@ -171,14 +257,17 @@ namespace SlugBase
         private static void SaveState_ctor(On.SaveState.orig_ctor orig, SaveState self, int saveStateNumber, PlayerProgression progression)
         {
             orig(self, saveStateNumber, progression);
-            if (!(CurrentCharacter?.HasDreams ?? true))
+
+            var cha = GetCustomPlayer(saveStateNumber);
+            if (cha != null && !cha.HasDreams)
                 self.dreamsState = null;
         }
 
         // Disallow the guardian skip on request
         private static void TempleGuardAI_Update(On.TempleGuardAI.orig_Update orig, TempleGuardAI self)
         {
-            if(UsingCustomCharacter && !CurrentCharacter.CanSkipTempleGuards)
+            var cha = GetCustomPlayer(self.creature.world.game);
+            if(cha != null && !cha.CanSkipTempleGuards)
             {
                 self.tracker.SeeCreature(self.guard.room.game.Players[0]);
             }
@@ -188,14 +277,16 @@ namespace SlugBase
         // Change cycle length on request
         private static void RainCycle_ctor(On.RainCycle.orig_ctor orig, RainCycle self, World world, float minutes)
         {
-            orig(self, world, CurrentCharacter?.GetCycleLength() ?? minutes);
+            orig(self, world, GetCustomPlayer(world.game)?.GetCycleLength() ?? minutes);
         }
 
         // Unlock gates permanently on request
         private static void OverWorld_GateRequestsSwitchInitiation(On.OverWorld.orig_GateRequestsSwitchInitiation orig, OverWorld self, RegionGate reportBackToGate)
         {
             orig(self, reportBackToGate);
-            if (reportBackToGate != null && UsingCustomCharacter && CurrentCharacter.GatesPermanentlyUnlock)
+
+            var cha = GetCustomPlayer(self.game);
+            if (reportBackToGate != null && cha != null && cha.GatesPermanentlyUnlock)
                 reportBackToGate.Unlock();
         }
 
@@ -203,7 +294,7 @@ namespace SlugBase
         // It's technically possible to change QuarterFood while the game is running
         private static void FoodMeter_Update(On.HUD.FoodMeter.orig_Update orig, HUD.FoodMeter self)
         {
-            if (self.quarterPipShower == null && UsingCustomCharacter && self.hud.owner is Player ply && ply.playerState.quarterFoodPoints > 0)
+            if (self.quarterPipShower == null && self.hud.owner is Player ply && GetCustomPlayer(ply) != null && ply.playerState.quarterFoodPoints > 0)
                 self.quarterPipShower = new HUD.FoodMeter.QuarterPipShower(self);
             orig(self);
         }
@@ -227,7 +318,7 @@ namespace SlugBase
         {
             try
             {
-                giveQuarterFood = UsingCustomCharacter && CurrentCharacter.QuarterFood && !IsMeat(edible);
+                giveQuarterFood = (GetCustomPlayer(self)?.QuarterFood ?? false) && !IsMeat(edible);
                 orig(self, edible);
             }
             finally
@@ -250,13 +341,14 @@ namespace SlugBase
         private static bool lock_CanEatMeat = false;
         private static bool Player_CanEatMeat(On.Player.orig_CanEatMeat orig, Player self, Creature crit)
         {
-            if (lock_CanEatMeat || !UsingCustomCharacter) return orig(self, crit);
+            var cha = GetCustomPlayer(self);
+            if (lock_CanEatMeat || cha == null) return orig(self, crit);
 
             if ((crit is IPlayerEdible edible && edible.Edible) || !crit.dead) return false;
             lock_CanEatMeat = true;
             try
             {
-                return CurrentCharacter.CanEatMeat(self, crit);
+                return cha.CanEatMeat(self, crit);
             }
             finally
             {
@@ -288,20 +380,80 @@ namespace SlugBase
             if (lock_SlugcatStatsCtor) return;
 
             lock_SlugcatStatsCtor = true;
-            SlugBaseCharacter ply = GetCustomPlayer(slugcatNumber);
-            ply?.GetStatsInternal(self);
+            GetCustomPlayer(slugcatNumber)?.GetStatsInternal(self);
             lock_SlugcatStatsCtor = false;
         }
 
+        private static void PlayerGraphics_Update(On.PlayerGraphics.orig_Update orig, PlayerGraphics self)
+        {
+            try
+            {
+                currentlyDrawingPlayer = self.player;
+                orig(self);
+            }
+            finally
+            {
+                currentlyDrawingPlayer = null;
+            }
+        }
+
+        private static void PlayerGraphics_DrawSprites(On.PlayerGraphics.orig_DrawSprites orig, PlayerGraphics self, RoomCamera.SpriteLeaser sLeaser, RoomCamera rCam, float timeStacker, Vector2 camPos)
+        {
+            try
+            {
+                currentlyDrawingPlayer = self.player;
+                orig(self, sLeaser, rCam, timeStacker, camPos);
+            }
+            finally
+            {
+                currentlyDrawingPlayer = null;
+            }
+        }
+
         // Change eye color on request
+        // Override Nightcat's colors when in arena mode
         private static void PlayerGraphics_ApplyPalette(On.PlayerGraphics.orig_ApplyPalette orig, PlayerGraphics self, RoomCamera.SpriteLeaser sLeaser, RoomCamera rCam, RoomPalette palette)
         {
-            orig(self, sLeaser, rCam, palette);
-
-            Color? eyeColor = GetCustomPlayer(self.player.playerState.slugcatCharacter)?.SlugcatEyeColor();
-            if (eyeColor.HasValue && sLeaser.sprites.Length > 9)
+            var lastDrawingPlayer = currentlyDrawingPlayer;
+            try
             {
-                sLeaser.sprites[9].color = eyeColor.Value;
+                currentlyDrawingPlayer = self.player;
+                orig(self, sLeaser, rCam, palette);
+            }
+            finally
+            {
+                currentlyDrawingPlayer = lastDrawingPlayer;
+            }
+
+            var cha = GetCustomPlayer(self.player);
+            Color? bodyColor = cha?.SlugcatColorInternal(self.player.playerState.slugcatCharacter);
+            Color? eyeColor = cha?.SlugcatEyeColorInternal(self.player.playerState.slugcatCharacter);
+
+            if(sLeaser.sprites.Length >= 12)
+            {
+                // Fix Nightcat's colors
+                if (bodyColor != null && self.player.playerState.slugcatCharacter == 3)
+                {
+                    if (self.malnourished > 0f)
+                        bodyColor = Color.Lerp(bodyColor.Value, Color.gray, 0.4f * self.malnourished);
+
+                    if (eyeColor == null)
+                        eyeColor = palette.blackColor;
+
+                    for (int i = 0; i < 9; i++)
+                    {
+                        sLeaser.sprites[i].color = bodyColor.Value;
+                    }
+
+                    sLeaser.sprites[11].color = Color.Lerp(PlayerGraphics.SlugcatColor(self.player.playerState.slugcatCharacter), Color.white, 0.3f);
+                    sLeaser.sprites[10].color = PlayerGraphics.SlugcatColor(self.player.playerState.slugcatCharacter);
+                }
+
+                // Set eye color
+                if (eyeColor.HasValue && sLeaser.sprites.Length > 9)
+                {
+                    sLeaser.sprites[9].color = eyeColor.Value;
+                }
             }
         }
 
@@ -309,32 +461,44 @@ namespace SlugBase
         private static Color PlayerGraphics_SlugcatColor(On.PlayerGraphics.orig_SlugcatColor orig, int i)
         {
             if (useOriginalColor) return orig(i);
-            return GetCustomPlayer(i)?.SlugcatColor() ?? orig(i);
+
+            bool lastOrigColor = useOriginalColor;
+            try
+            {
+                useOriginalColor = true;
+                if (currentlyDrawingPlayer != null)
+                    return GetCustomPlayer(currentlyDrawingPlayer)?.SlugcatColorInternal(i) ?? orig(i);
+                else
+                    return GetCustomPlayer(i)?.SlugcatColorInternal(i) ?? orig(i);
+            }
+            finally
+            {
+                useOriginalColor = lastOrigColor;
+            }
         }
 
         // Enable a character as the game starts
         private static void RainWorldGame_ctor(On.RainWorldGame.orig_ctor orig, RainWorldGame self, ProcessManager manager)
         {
             if (manager.arenaSitting == null)
-                StartGame(manager.rainWorld.progression.PlayingAsSlugcat);
+                StartGame(self, manager.rainWorld.progression.PlayingAsSlugcat);
             else
             {
                 // In arena, default to playing as survivor
-                // If a SlugBase character is in dev mode, use that slot instead
                 if (ArenaAdditions.arenaCharacter.TryGet(manager.arenaSetup, out var ply))
                 {
                     switch (ply.type)
                     {
                         case ArenaAdditions.PlayerDescriptor.Type.SlugBase:
-                            StartGame(ply.player);
+                            StartGame(self, ply.player);
                             break;
                         case ArenaAdditions.PlayerDescriptor.Type.Vanilla:
                         default:
-                            StartGame(0);
+                            StartGame(self, 0);
                             break;
                     }
                 }
-                else StartGame(0);
+                else StartGame(self, 0);
             }
             orig(self, manager);
         }
@@ -343,36 +507,83 @@ namespace SlugBase
         private static void RainWorldGame_ShutDownProcess(On.RainWorldGame.orig_ShutDownProcess orig, RainWorldGame self)
         {
             orig(self);
-
-            // Do not end the game if the upcoming process is also the game, such as with RainWorldGame.RestartGame
-            // This is to prevent the character from being disabled while it is already prepared
-            if (self.manager.upcomingProcess != ProcessManager.ProcessID.Game)
-                EndGame();
+            EndGame(self);
         }
 
         #endregion HOOKS
 
-        internal static void StartGame(int slugcatNumber)
+        private static void SetCustomPlayer(RainWorldGame game, SlugBaseCharacter customPlayer)
         {
-            SlugBaseCharacter ply = GetCustomPlayer(slugcatNumber);
-            if(ply != null)
+            if(!gameSetups.TryGetValue(game, out GameSetup setup))
+                gameSetups[game] = setup = new GameSetup();
+            setup.worldCharacter = customPlayer;
+        }
+
+        private static void AddCustomPlayer(RainWorldGame game, AbstractCreature player, SlugBaseCharacter customPlayer)
+        {
+            if (!gameSetups.TryGetValue(game, out GameSetup setup))
+                gameSetups[game] = setup = new GameSetup();
+
+            customPlayer?.EnableInstance();
+            if (!setup.playerCharacters.ContainsKey(player))
             {
-                Debug.Log($"Started game as \"{ply.Name}\"");
-                ply.EnableInternal();
+                setup.playerCharacters[player] = customPlayer;
+                if (player.realizedObject is Player ply)
+                    customPlayer?.PlayerAdded(game, ply);
             }
         }
 
-        internal static void StartGame(SlugBaseCharacter customPlayer)
+        private static Dictionary<AbstractCreature, SlugBaseCharacter> GetAllPlayerCharacters(RainWorldGame game)
         {
-            Debug.Log($"Started game as \"{customPlayer.Name}\"");
-            customPlayer.EnableInternal();
+            if (gameSetups.TryGetValue(game, out GameSetup setup))
+                return setup.playerCharacters;
+            return new Dictionary<AbstractCreature, SlugBaseCharacter>();
         }
 
-        internal static void EndGame()
+        internal static void StartGame(RainWorldGame game, int slugcatNumber)
         {
-            if (CurrentCharacter != null)
-                Debug.Log($"Ended game as \"{CurrentCharacter.Name}\"");
-            CurrentCharacter?.DisableInternal();
+            SlugBaseCharacter ply = GetCustomPlayer(slugcatNumber);
+            if (ply != null)
+                StartGame(game, ply);
+        }
+
+        internal static void StartGame(RainWorldGame game, SlugBaseCharacter customPlayer)
+        {
+            Debug.Log($"Started game as \"{customPlayer.Name}\"");
+
+            SetCustomPlayer(game, customPlayer);
+
+#pragma warning disable CS0618 // Type or member is obsolete
+            CurrentCharacter = customPlayer;
+#pragma warning restore CS0618 // Type or member is obsolete
+
+            customPlayer.EnableInstance();
+        }
+
+        internal static void EndGame(RainWorldGame game)
+        {
+            // Disable all player characters
+            foreach (var pair in GetAllPlayerCharacters(game))
+                pair.Value?.DisableInstance();
+
+            // Disable the world character
+            var ply = GetCustomPlayer(game);
+            if (ply != null)
+            {
+                Debug.Log($"Ended game as \"{ply.Name}\"");
+                ply.DisableInstance();
+            }
+
+#pragma warning disable CS0618 // Type or member is obsolete
+            if (CurrentCharacter == ply)
+                CurrentCharacter = null;
+#pragma warning restore CS0618 // Type or member is obsolete
+        }
+
+        private class GameSetup
+        {
+            public SlugBaseCharacter worldCharacter;
+            public Dictionary<AbstractCreature, SlugBaseCharacter> playerCharacters = new Dictionary<AbstractCreature, SlugBaseCharacter>();
         }
     }
 }

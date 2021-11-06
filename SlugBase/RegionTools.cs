@@ -30,11 +30,11 @@ namespace SlugBase
         }
 
         // Check and filter a single line of a world file
-        private static bool ShouldKeepLine(string line, out string newLine)
+        private static bool ShouldKeepLine(RainWorldGame game, string line, out string newLine)
         {
             newLine = line;
 
-            string charName = PlayerManager.CurrentCharacter?.Name;
+            string charName = PlayerManager.GetCustomPlayer(game)?.Name;
             var args = Regex.Split(line, " : ");
 
             if (args.Length == 0)
@@ -148,7 +148,7 @@ namespace SlugBase
         {
             var line = self.lines[self.cntr];
 
-            if (ShouldKeepLine(line, out var newLine))
+            if (ShouldKeepLine(self.game, line, out var newLine))
             {
                 string[] args = Regex.Split(newLine, " : ");
                 bool replace = args.Length > 1 && (args[0] == "LINEAGE" ? args[1] : args[0]).EndsWith("_REPLACE");
@@ -370,7 +370,8 @@ namespace SlugBase
         // Load custom filters
         private static void RoomSettings_LoadPlacedObjects(On.RoomSettings.orig_LoadPlacedObjects orig, RoomSettings self, string[] s, int playerChar)
         {
-            orig(self, s, playerChar);
+            var cha = PlayerManager.GetCustomPlayer(playerChar);
+            orig(self, s, cha?.InheritWorldFromSlugcat ?? playerChar);
 
             // Read from the supplementary settings file
             var settings = SupplementaryRoomSettings.Load(self);
@@ -379,8 +380,8 @@ namespace SlugBase
             else
                 settings = supplementarySettings[self] = new SupplementaryRoomSettings();
 
-            if (!PlayerManager.UsingCustomCharacter) return;
-            var charName = PlayerManager.CurrentCharacter.Name;
+            if (cha == null) return;
+            var charName = cha.Name;
 
             var filters = new List<PlacedObject>();
             foreach(var pObj in self.placedObjects)

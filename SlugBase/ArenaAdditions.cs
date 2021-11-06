@@ -71,7 +71,7 @@ namespace SlugBase
                 switch (ply.type)
                 {
                     case PlayerDescriptor.Type.SlugBase:
-                        ply.player.GetStatsInternal(self.characterStats);
+                        self.characterStats = new SlugcatStats(ply.player.SlugcatIndex, false);
                         break;
                     case PlayerDescriptor.Type.Vanilla:
                         if (ply.index != 0)
@@ -484,7 +484,6 @@ namespace SlugBase
             }
         }
 
-        // Indices won't be assigned yet, so just an int isn't enough
         /// <summary>
         /// Represents a Rain World character.
         /// </summary>
@@ -551,7 +550,7 @@ namespace SlugBase
             }
 
             /// <summary>
-            /// The color of this character, as gotten with <see cref="PlayerGraphics.SlugcatColor(int)"/>.
+            /// The default color of this character, as gotten with <see cref="PlayerGraphics.SlugcatColor(int)"/>.
             /// </summary>
             public Color Color
             {
@@ -560,7 +559,7 @@ namespace SlugBase
                     switch (type)
                     {
                         case Type.SlugBase:
-                            return player.SlugcatColor() ?? PlayerGraphics.SlugcatColor(0);
+                            return player.SlugcatColorInternal(player.SlugcatIndex) ?? PlayerGraphics.SlugcatColor(0);
                         case Type.Vanilla:
                         default:
                             return PlayerGraphics.SlugcatColor(index);

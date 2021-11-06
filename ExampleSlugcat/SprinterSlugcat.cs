@@ -6,7 +6,7 @@ namespace ExampleSlugcat
     // Describes the character you want to add
     internal class SprinterSlugcat : SlugBaseCharacter
     {
-        public SprinterSlugcat() : base("Sprinter", FormatVersion.V1) { }
+        public SprinterSlugcat() : base("Sprinter", FormatVersion.V1, 0, true) { }
 
         // Custom //
 
@@ -35,7 +35,7 @@ namespace ExampleSlugcat
         // Update stats when in turbo move
         private void Player_MovementUpdate(On.Player.orig_MovementUpdate orig, Player self, bool eu)
         {
-            if (self.TryGetSave<SprinterSaveState>(out var save) && save.isTurbo)
+            if (IsMe(self) && self.TryGetSave<SprinterSaveState>(out var save) && save.isTurbo)
                 self.slugcatStats.runspeedFac = 5f;
             orig(self, eu);
         }
@@ -43,7 +43,7 @@ namespace ExampleSlugcat
         // Go absolutely wild once a mushroom is eaten
         private void Player_ObjectEaten(On.Player.orig_ObjectEaten orig, Player self, IPlayerEdible edible)
         {
-            if (edible is Mushroom && self.TryGetSave<SprinterSaveState>(out var save))
+            if (IsMe(self) && edible is Mushroom && self.TryGetSave<SprinterSaveState>(out var save))
             {
                 save.isTurbo = true;
             }
@@ -51,9 +51,11 @@ namespace ExampleSlugcat
         }
 
         // Add more height to all standard jumps
-        private static void Player_Jump(On.Player.orig_Jump orig, Player self)
+        private void Player_Jump(On.Player.orig_Jump orig, Player self)
         {
             orig(self);
+            if (!IsMe(self)) return;
+
             if (self.TryGetSave<SprinterSaveState>(out var save) && save.isTurbo)
                 self.jumpBoost += 9f;
             else
@@ -68,7 +70,15 @@ namespace ExampleSlugcat
 @"A lightspeed rodent whose supernatural speed stems from chillidogs and a curious glowing fungus.
 This is an example slugcat for the SlugBase framework.";
 
-        public override Color? SlugcatColor() => new Color(0.37f, 0.36f, 0.91f);
+        public override Color? SlugcatColor(int slugcatCharacter)
+        {
+            Color col = new Color(0.37f, 0.36f, 0.91f);
+
+            if (slugcatCharacter == -1)
+                return col;
+            else
+                return Color.Lerp(PlayerGraphics.SlugcatColor(slugcatCharacter), col, 0.75f);
+        }
 
         public override bool HasGuideOverseer => false;
 

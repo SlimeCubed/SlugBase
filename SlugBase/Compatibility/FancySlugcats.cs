@@ -24,7 +24,8 @@ namespace SlugBase.Compatibility
 
                 // FancySlugcats.FancyPlayerGraphics.ctor throws with slugcat indices above 4
                 On.Player.InitiateGraphicsModule += FSPatch_InitiateGraphicsModule;
-            } catch(Exception e)
+            }
+            catch(Exception e)
             {
                 Debug.Log("Failed to apply compatibility changes. This shouldn't be fatal, but may cause compatibility issues.");
                 Debug.Log(e);
@@ -48,7 +49,7 @@ namespace SlugBase.Compatibility
                     if (ply != null)
                     {
                         // For SlugBase characters, use the character that it copies from
-                        self.playerState.slugcatCharacter = ply.useSpawns;
+                        self.playerState.slugcatCharacter = ply.InheritWorldFromSlugcat;
                     }
                     else
                     {
@@ -69,14 +70,14 @@ namespace SlugBase.Compatibility
             try { return orig(i); }
             catch
             {
-                SlugBaseCharacter ply = PlayerManager.GetCustomPlayer(i) ?? PlayerManager.CurrentCharacter;
+                SlugBaseCharacter ply = PlayerManager.GetCustomPlayer(i);
                 if(ply != null)
                 {
                     try
                     {
                         // Bypass SlugBase colors when using FancySlugcats
                         PlayerManager.useOriginalColor = true;
-                        return orig(ply.WorldCharacter);
+                        return orig(ply.InheritWorldFromSlugcat);
                     }
                     catch { }
                     PlayerManager.useOriginalColor = false;

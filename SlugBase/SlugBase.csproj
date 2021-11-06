@@ -36,8 +36,16 @@
       <HintPath>..\..\rwmodlibspublic\Assembly-CSharp.dll</HintPath>
       <Private>False</Private>
     </Reference>
+    <Reference Include="ConfigMachine">
+      <HintPath>..\..\rwmodlibspublic\ConfigMachine.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
     <Reference Include="HOOKS-Assembly-CSharp">
       <HintPath>..\..\rwmodlibspublic\HOOKS-Assembly-CSharp.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
+    <Reference Include="JollyCoop">
+      <HintPath>..\..\..\..\..\..\Program Files (x86)\Steam\steamapps\common\Rain World\Mods\JollyCoop.dll</HintPath>
       <Private>False</Private>
     </Reference>
     <Reference Include="MonoMod.RuntimeDetour">
@@ -65,6 +73,7 @@
     <Compile Include="Compatibility\FancySlugcats.cs" />
     <Compile Include="Compatibility\FlatmodeFix.cs" />
     <Compile Include="Compatibility\HookGenFix.cs" />
+    <Compile Include="Compatibility\JollyCoop.cs" />
     <Compile Include="SlugBaseCharacter.cs" />
     <Compile Include="CustomSaveState.cs" />
     <Compile Include="Scenes\CustomScene.cs" />

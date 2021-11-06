@@ -8,7 +8,7 @@ namespace SlugBase
 {
     internal class SlugBaseMod : PartialityMod
     {
-        public const string versionString = "1.2.0-beta2";
+        public const string versionString = "1.2.0-beta3";
 
         // AutoUpdate support
         public string updateURL = "http://beestuff.pythonanywhere.com/audb/api/mods/6/0";
@@ -47,9 +47,8 @@ namespace SlugBase
              * TODO:
              * 
              * Scene editor (maybe)
-             * SlugBase filtered spawns (needs testing)
-             * SlugBase filtered placed objects
-             * Wiki page for region modders
+             * Multi-instance support for arena
+             * Track down uses of SlugcatColor that are associated with a Player instance
              * 
              */
         }
@@ -59,6 +58,8 @@ namespace SlugBase
             // Compatibility fixes
             Compatibility.FlatmodeFix.Apply();
             Compatibility.HookGenFix.Apply();
+
+            Testing.ApplyHooks();
 
             // Core changes
             ArenaAdditions.ApplyHooks();
@@ -84,6 +85,7 @@ namespace SlugBase
         {
             // Compatibility fixes (applied over other hooks)
             Compatibility.FancySlugcats.Apply();
+            Compatibility.JollyCoop.Apply();
             WorldFixes.LateApply();
 
             orig(self);
