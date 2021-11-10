@@ -139,14 +139,14 @@ namespace SlugBase
         /// For <see cref="MultiInstance"/> characters, this method is called when any players
         /// are this character or this character's world was loaded.
         /// </summary>
-        protected abstract void Enable();
+        protected virtual void Enable() { }
 
         /// <summary>
         /// Called once when a game is ended as this character.
         /// For <see cref="MultiInstance"/> characters, this method is called once no more players
         /// are using this character and this character's world is not loaded.
         /// </summary>
-        protected abstract void Disable();
+        protected virtual void Disable() { }
 
         /// <summary>
         /// Returns whether the given <see cref="Player"/> instance is this character.
