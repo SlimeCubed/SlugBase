@@ -92,6 +92,6 @@
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
-    <PostBuildEvent>if defined RWMods (copy /Y "$(TargetPath)" "%25RWMods%25")</PostBuildEvent>
+    <PostBuildEvent>if defined RWMods (copy /Y "$(TargetPath)" "%25RWMods%25" &amp; copy /Y "$(TargetDir)$(TargetName).xml" "%25RWMods%25")</PostBuildEvent>
   </PropertyGroup>
 </Project>
