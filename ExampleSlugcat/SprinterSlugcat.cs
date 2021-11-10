@@ -70,14 +70,14 @@ namespace ExampleSlugcat
 @"A lightspeed rodent whose supernatural speed stems from chillidogs and a curious glowing fungus.
 This is an example slugcat for the SlugBase framework.";
 
-        public override Color? SlugcatColor(int slugcatCharacter)
+        public override Color? SlugcatColor(int slugcatCharacter, Color baseColor)
         {
             Color col = new Color(0.37f, 0.36f, 0.91f);
 
             if (slugcatCharacter == -1)
                 return col;
             else
-                return Color.Lerp(PlayerGraphics.SlugcatColor(slugcatCharacter), col, 0.75f);
+                return Color.Lerp(baseColor, col, 0.75f);
         }
 
         public override bool HasGuideOverseer => false;

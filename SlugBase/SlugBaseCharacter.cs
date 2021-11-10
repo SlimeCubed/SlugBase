@@ -374,8 +374,15 @@ namespace SlugBase
         /// The slugcat this player is set to appear as. This will be -1 in singleplayer and 0 to 3 in arena mode.
         /// Other mods may pass in different values.
         /// </param>
+        /// <param name="baseColor">
+        /// The original color returned by <see cref="PlayerGraphics.SlugcatColor(int)"/>.
+        /// </param>
+        /// <remarks>
+        /// Returning a non-null value with a <paramref name="slugcatCharacter"/> of 3 will cause
+        /// the player to be recolored to undo Nightcat's special coloration.
+        /// </remarks>
         /// <returns>The color to use, or null to use the default for this save slot.</returns>
-        public virtual Color? SlugcatColor(int slugcatCharacter)
+        public virtual Color? SlugcatColor(int slugcatCharacter, Color baseColor)
         {
 #pragma warning disable CS0618 // Type or member is obsolete
             return SlugcatColor();
@@ -384,14 +391,14 @@ namespace SlugBase
 
         internal Color? SlugcatColorInternal(int slugcatCharacter)
         {
-            return SlugcatColor(slugcatCharacter == SlugcatIndex ? -1 : slugcatCharacter);
+            return SlugcatColor(slugcatCharacter == SlugcatIndex ? -1 : slugcatCharacter, PlayerGraphics.SlugcatColor(slugcatCharacter));
         }
 
         /// <summary>
         /// Gets the colors of this character's eyes.
         /// </summary>
         /// <returns>The color to use, or null to use the default for this save slot.</returns>
-        [Obsolete("Use SlugcatColor(int slugcatCharacter) instead.")]
+        [Obsolete("Use SlugcatColor(int, Color) instead.")]
         public virtual Color? SlugcatEyeColor() => null;
 
         /// <summary>
