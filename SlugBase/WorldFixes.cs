@@ -165,6 +165,8 @@ namespace SlugBase
 
         private static void ResizeToFitPlayers<T>(ref T[] array, T initValue)
         {
+            if (PlayerManager.GetCustomPlayers().Count == 0) return;
+
             var maxIndex = PlayerManager.GetCustomPlayers().Max(cha => cha.SlugcatIndex);
             ResizeToFit(ref array, maxIndex + 1, initValue);
         }
