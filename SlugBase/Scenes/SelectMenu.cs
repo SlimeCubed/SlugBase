@@ -208,33 +208,39 @@ namespace SlugBase
 
 
             // Load a custom character's select screen from resources
-            CustomScene scene = OverrideNextScene(ply, sceneName, img =>
+            var sceneOverride = OverrideNextScene(ply, sceneName, img =>
             {
                 if (img.HasTag("MARK") && !self.HasMark) return false;
                 if (img.HasTag("GLOW") && !self.HasGlow) return false;
                 return true;
             });
 
-            // Parse selectmenux and selectmenuy
-            self.sceneOffset.x = scene.GetProperty<float?>("selectmenux") ?? 0f;
-            self.sceneOffset.y = scene.GetProperty<float?>("selectmenuy") ?? 0f;
-            Debug.Log($"Scene offset for {ply.Name}: {self.sceneOffset}");
+            MarkImage mark = null;
+            GlowImage glow = null;
+            sceneOverride.OnLoad += (scene) =>
+            {
+                // Parse selectmenux and selectmenuy
+                self.sceneOffset.x = scene.GetProperty<float?>("selectmenux") ?? 0f;
+                self.sceneOffset.y = scene.GetProperty<float?>("selectmenuy") ?? 0f;
+                Debug.Log($"Scene offset for {ply.Name}: {self.sceneOffset}");
 
-            // Slugcat depth, used for positioning the glow and mark
-            self.slugcatDepth = scene.GetProperty<float?>("slugcatdepth") ?? 3f;
+                // Slugcat depth, used for positioning the glow and mark
+                self.slugcatDepth = scene.GetProperty<float?>("slugcatdepth") ?? 3f;
 
-            // Add mark
-            MarkImage mark = new MarkImage(scene, self.slugcatDepth + 0.1f);
-            scene.InsertImage(mark);
+                // Add mark
+                mark = new MarkImage(scene, self.slugcatDepth + 0.1f);
+                scene.InsertImage(mark);
 
-            // Add glow
-            GlowImage glow = new GlowImage(scene, self.slugcatDepth + 0.1f);
-            scene.InsertImage(glow);
+                // Add glow
+                glow = new GlowImage(scene, self.slugcatDepth + 0.1f);
+                scene.InsertImage(glow);
+            };
 
             try
             {
                 self.slugcatImage = new InteractiveMenuScene(self.menu, self, MenuScene.SceneID.Slugcat_White); // This scene will be immediately overwritten
-            } finally { ClearSceneOverride(); }
+            }
+            finally { ClearSceneOverride(); }
             self.subObjects.Add(self.slugcatImage);
 
             // Find the relative mark and glow positions
