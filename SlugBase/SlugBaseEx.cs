@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
+﻿using Menu;
 
 namespace SlugBase
 {
@@ -42,6 +39,16 @@ namespace SlugBase
                 save = null;
                 return false;
             }
+        }
+
+        /// <summary>
+        /// Gets the <see cref="SceneImage"/> associated with this illustration if it was built from a <see cref="SlugBaseCharacter"/>'s resources.
+        /// </summary>
+        /// <param name="illustration">The menu illustration to check.</param>
+        /// <returns>The <see cref="SceneImage"/> associated with this illustration or null if it was not built from a <see cref="SlugBaseCharacter"/>'s resources.</returns>
+        public static SceneImage GetCustomImage(this MenuIllustration illustration)
+        {
+            return CustomSceneManager.customRep[illustration];
         }
     }
 }
