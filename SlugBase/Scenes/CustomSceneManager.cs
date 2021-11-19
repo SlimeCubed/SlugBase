@@ -113,7 +113,17 @@ namespace SlugBase
                 // Load a custom scene
 
                 SlugBaseCharacter owner = slideshowOverride.Character;
-                var builtSlideshow = owner.BuildSlideshow(slideshowOverride.ResourceName);
+                CustomSlideshow builtSlideshow;
+                try
+                {
+                    builtSlideshow = owner.BuildSlideshow(slideshowOverride.ResourceName);
+                }
+                catch(Exception e)
+                {
+                    Debug.LogError($"Failed to load slideshow: {slideshowOverride.ResourceName}");
+                    Debug.LogException(e);
+                    return;
+                }
                 slideshowOverride.Load(builtSlideshow);
                 List<SlideshowSlide> slides = builtSlideshow.Slides;
 
