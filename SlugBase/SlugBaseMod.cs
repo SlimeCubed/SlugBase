@@ -48,7 +48,6 @@ namespace SlugBase
              * 
              * Scene editor (maybe)
              * Multi-instance support for arena
-             * Track down uses of SlugcatColor that are associated with a Player instance
              * 
              */
         }
@@ -62,6 +61,7 @@ namespace SlugBase
             // Core changes
             ArenaAdditions.ApplyHooks();
             CustomSceneManager.ApplyHooks();
+            PlayerColors.ApplyHooks();
             PlayerManager.ApplyHooks();
             SaveManager.ApplyHooks();
             //SceneEditor.ApplyHooks();

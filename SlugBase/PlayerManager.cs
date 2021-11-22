@@ -17,7 +17,6 @@ namespace SlugBase
         internal static readonly List<SlugBaseCharacter> customPlayers = new List<SlugBaseCharacter>();
         private static readonly Dictionary<string, SlugBaseCharacter> customPlayersByName = new Dictionary<string, SlugBaseCharacter>();
         private static readonly Dictionary<RainWorldGame, GameSetup> gameSetups = new Dictionary<RainWorldGame, GameSetup>();
-        internal static Player currentlyDrawingPlayer;
         internal static bool useOriginalColor;
         private static SlugBaseCharacter currentPlayer;
 
@@ -147,6 +146,36 @@ namespace SlugBase
             return !string.IsNullOrEmpty(name) && Regex.IsMatch(name, "^[\\w ]+$");
         }
 
+        /// <summary>
+        /// Gets the color associated with the given player with the given slugcat character.
+        /// </summary>
+        /// <remarks>
+        /// This functions exactly like <see cref="PlayerGraphics.SlugcatColor(int)"/>, but will
+        /// not misbehave when using multi-instance <see cref="SlugBaseCharacter"/>s.
+        /// </remarks>
+        /// <param name="player">The player to get the color of.</param>
+        /// <param name="slugcatCharacter">
+        /// The character to check. This is normally -1 or the <paramref name="player"/>'s
+        /// <see cref="SlugBaseCharacter.SlugcatIndex"/>, but may differ in arena more or when using other mods.
+        /// </param>
+        public static Color GetSlugcatColor(Player player, int slugcatCharacter)
+        {
+            return PlayerColors.DrawingPlayer(player, () => PlayerGraphics.SlugcatColor(slugcatCharacter));
+        }
+
+        /// <summary>
+        /// Gets the color associated with the given player.
+        /// </summary>
+        /// <remarks>
+        /// This functions exactly like <see cref="PlayerGraphics.SlugcatColor(int)"/>, but will
+        /// not misbehave when using multi-instance <see cref="SlugBaseCharacter"/>s.
+        /// </remarks>
+        /// <param name="player">The player to get the color of.</param>
+        public static Color GetSlugcatColor(Player player)
+        {
+            return PlayerColors.DrawingPlayer(player, () => PlayerGraphics.SlugcatColor(player.playerState.slugcatCharacter));
+        }
+
         internal static void ApplyHooks()
         {
             On.AbstractCreature.Realize += AbstractCreature_Realize;
@@ -164,8 +193,6 @@ namespace SlugBase
             On.Player.CanEatMeat += Player_CanEatMeat;
             On.SlugcatStats.SlugcatFoodMeter += SlugcatStats_SlugcatFoodMeter;
             On.SlugcatStats.ctor += SlugcatStats_ctor;
-            On.PlayerGraphics.Update += PlayerGraphics_Update;
-            On.PlayerGraphics.DrawSprites += PlayerGraphics_DrawSprites;
             On.PlayerGraphics.ApplyPalette += PlayerGraphics_ApplyPalette;
             On.PlayerGraphics.SlugcatColor += PlayerGraphics_SlugcatColor;
             On.RainWorldGame.ctor += RainWorldGame_ctor;
@@ -384,46 +411,11 @@ namespace SlugBase
             lock_SlugcatStatsCtor = false;
         }
 
-        private static void PlayerGraphics_Update(On.PlayerGraphics.orig_Update orig, PlayerGraphics self)
-        {
-            try
-            {
-                currentlyDrawingPlayer = self.player;
-                orig(self);
-            }
-            finally
-            {
-                currentlyDrawingPlayer = null;
-            }
-        }
-
-        private static void PlayerGraphics_DrawSprites(On.PlayerGraphics.orig_DrawSprites orig, PlayerGraphics self, RoomCamera.SpriteLeaser sLeaser, RoomCamera rCam, float timeStacker, Vector2 camPos)
-        {
-            try
-            {
-                currentlyDrawingPlayer = self.player;
-                orig(self, sLeaser, rCam, timeStacker, camPos);
-            }
-            finally
-            {
-                currentlyDrawingPlayer = null;
-            }
-        }
-
         // Change eye color on request
         // Override Nightcat's colors when in arena mode
         private static void PlayerGraphics_ApplyPalette(On.PlayerGraphics.orig_ApplyPalette orig, PlayerGraphics self, RoomCamera.SpriteLeaser sLeaser, RoomCamera rCam, RoomPalette palette)
         {
-            var lastDrawingPlayer = currentlyDrawingPlayer;
-            try
-            {
-                currentlyDrawingPlayer = self.player;
-                orig(self, sLeaser, rCam, palette);
-            }
-            finally
-            {
-                currentlyDrawingPlayer = lastDrawingPlayer;
-            }
+            orig(self, sLeaser, rCam, palette);
 
             var cha = GetCustomPlayer(self.player);
             Color? bodyColor = cha?.SlugcatColorInternal(self.player.playerState.slugcatCharacter);
@@ -466,8 +458,8 @@ namespace SlugBase
             try
             {
                 useOriginalColor = true;
-                if (currentlyDrawingPlayer != null)
-                    return GetCustomPlayer(currentlyDrawingPlayer)?.SlugcatColorInternal(i) ?? orig(i);
+                if (PlayerColors.drawingCharacter != null)
+                    return PlayerColors.drawingCharacter.SlugcatColorInternal(i) ?? orig(i);
                 else
                     return GetCustomPlayer(i)?.SlugcatColorInternal(i) ?? orig(i);
             }

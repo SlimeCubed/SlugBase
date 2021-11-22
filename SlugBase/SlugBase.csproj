@@ -74,6 +74,7 @@
     <Compile Include="Compatibility\FlatmodeFix.cs" />
     <Compile Include="Compatibility\HookGenFix.cs" />
     <Compile Include="Compatibility\JollyCoop.cs" />
+    <Compile Include="PlayerColors.cs" />
     <Compile Include="SlugBaseCharacter.cs" />
     <Compile Include="CustomSaveState.cs" />
     <Compile Include="Scenes\CustomScene.cs" />
