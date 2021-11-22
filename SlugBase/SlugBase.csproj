@@ -74,7 +74,6 @@
     <Compile Include="Compatibility\FlatmodeFix.cs" />
     <Compile Include="Compatibility\HookGenFix.cs" />
     <Compile Include="Compatibility\JollyCoop.cs" />
-    <Compile Include="SavedFieldAttribute.cs" />
     <Compile Include="SlugBaseCharacter.cs" />
     <Compile Include="CustomSaveState.cs" />
     <Compile Include="Scenes\CustomScene.cs" />
@@ -83,14 +82,6 @@
     <Compile Include="Scenes\ShelterScreens.cs" />
     <Compile Include="SlugBaseEx.cs" />
     <Compile Include="RegionTools.cs" />
-    <Compile Include="TinyJSON\DefaultDecoder.cs" />
-    <Compile Include="TinyJSON\DefaultEncoder.cs" />
-    <Compile Include="TinyJSON\Extensions.cs" />
-    <Compile Include="TinyJSON\Json.cs" />
-    <Compile Include="TinyJSON\JsonBuilder.cs" />
-    <Compile Include="TinyJSON\JsonMapper.cs" />
-    <Compile Include="TinyJSON\JsonParser.cs" />
-    <Compile Include="TinyJSON\JsonPropertyAttribute.cs" />
     <Compile Include="WorldFixes.cs" />
     <Compile Include="SaveManager.cs" />
     <Compile Include="Scenes\CustomSceneManager.cs" />

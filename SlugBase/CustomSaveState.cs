@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
 using System.Text;
 
 namespace SlugBase
@@ -44,16 +43,10 @@ namespace SlugBase
         /// </summary>
         /// <remarks>
         /// <see cref="Load(Dictionary{string, string})"/> should be overridden to handle the same values.
-        /// Make sure to call <c>base.Save(data)</c> if the child class has any fields marked with <see cref="SavedFieldAttribute"/>.
         /// </remarks>
         /// <param name="data">The empty dictionary to add your data to.</param>
         public virtual void Save(Dictionary<string, string> data)
         {
-            foreach (var field in SerializableFields(false))
-            {
-                if (TrySerializeField(field, out string json))
-                    data[field.Name] = json;
-            }
         }
 
         /// <summary>
@@ -62,18 +55,10 @@ namespace SlugBase
         /// </summary>
         /// <remarks>
         /// <see cref="Save(Dictionary{string, string})"/> should be overridden to handle the same values.
-        /// Make sure to call <c>base.Load(data)</c> if the child class has any fields marked with <see cref="SavedFieldAttribute"/>.
         /// </remarks>
         /// <param name="data">The dictionary to read your data from.</param>
         public virtual void Load(Dictionary<string, string> data)
         {
-            foreach (var field in SerializableFields(false))
-            {
-                if (data.TryGetValue(field.Name, out string json) && TryDeserializeField(field, json, out object value))
-                    field.SetValue(this, value);
-                else
-                    field.SetValue(this, null);
-            }
         }
 
         /// <summary>
@@ -91,11 +76,6 @@ namespace SlugBase
         /// <param name="asQuit">True if the player has quit.</param>
         public virtual void SavePermanent(Dictionary<string, string> data, bool asDeath, bool asQuit)
         {
-            foreach (var field in SerializableFields(true))
-            {
-                if (TrySerializeField(field, out string json))
-                    data[field.Name] = json;
-            }
         }
 
         /// <summary>
@@ -108,52 +88,6 @@ namespace SlugBase
         /// <param name="data">The dictionary to read your data from.</param>
         public virtual void LoadPermanent(Dictionary<string, string> data)
         {
-            foreach (var field in SerializableFields(true))
-            {
-                if (data.TryGetValue(field.Name, out string json) && TryDeserializeField(field, json, out object value))
-                    field.SetValue(this, value);
-                else
-                    field.SetValue(this, null);
-            }
-        }
-
-        private bool TrySerializeField(FieldInfo field, out string json)
-        {
-            json = null;
-            var value = field.GetValue(this);
-
-            if (field.FieldType.IsValueType)
-            {
-                // Check if the value type is its default value
-                if (value.Equals(Activator.CreateInstance(field.FieldType))) return false;
-            }
-            else
-            {
-                // Check if the object is null
-                if (value == null) return false;
-            }
-
-            json = Tiny.Json.Encode(value);
-            return true;
-        }
-
-        private bool TryDeserializeField(FieldInfo field, string json, out object value)
-        {
-            value = Tiny.Json.Decode(json, field.FieldType);
-            return true;
-        }
-
-        private IEnumerable<FieldInfo> SerializableFields(bool deathPersistent)
-        {
-            return GetType()
-                .GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)
-                .Where(f => ShouldSerialize(f, deathPersistent));
-        }
-
-        private bool ShouldSerialize(FieldInfo field, bool deathPersistent)
-        {
-            var attribs = field.GetCustomAttributes(typeof(SavedFieldAttribute), true);
-            return attribs.Length > 0 && deathPersistent == ((SavedFieldAttribute)attribs[0]).PersistOnDeath;
         }
 
         #region Hooks
