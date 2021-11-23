@@ -8,7 +8,7 @@ namespace SlugBase
 {
     internal class SlugBaseMod : PartialityMod
     {
-        public const string versionString = "1.2.0-beta3";
+        public const string versionString = "1.2.0-beta4";
         public const string assemblyVersion = "1.2.0.0";
 
         // AutoUpdate support
