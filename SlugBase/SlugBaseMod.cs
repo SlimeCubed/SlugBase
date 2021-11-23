@@ -60,7 +60,6 @@ namespace SlugBase
             Compatibility.HookGenFix.Apply();
 
             // Core changes
-            ArenaAdditions.ApplyHooks();
             CustomSceneManager.ApplyHooks();
             PlayerColors.ApplyHooks();
             PlayerManager.ApplyHooks();
@@ -71,24 +70,21 @@ namespace SlugBase
             RegionTools.ApplyHooks();
             WorldFixes.ApplyHooks();
 
-            On.RainWorld.Start += RainWorld_Start;
+            // Changes that must be applied late for compatibility
+            On.RainWorld.Start += (orig, self) =>
+            {
+                Compatibility.FancySlugcats.Apply();
+                Compatibility.JollyCoop.Apply();
+                ArenaAdditions.ApplyHooks();
+                WorldFixes.LateApply();
+
+                orig(self);
+            };
 
             // Guess an appropriate index to assign to SlugBase characters
             // This should make them more resistant to skipping the select screen
             foreach (SlugcatStats.Name name in Enum.GetValues(typeof(SlugcatStats.Name)))
                 FirstCustomIndex = Math.Max((int)name + 1, FirstCustomIndex);
-        }
-
-        // Apply modules that must be added late
-        private void RainWorld_Start(On.RainWorld.orig_Start orig, RainWorld self)
-        {
-            // Compatibility fixes (applied over other hooks)
-            Compatibility.FancySlugcats.Apply();
-            Compatibility.JollyCoop.Apply();
-            WorldFixes.LateApply();
-
-            orig(self);
-            On.RainWorld.Start -= RainWorld_Start;
         }
 
         public object GetReloadState()
