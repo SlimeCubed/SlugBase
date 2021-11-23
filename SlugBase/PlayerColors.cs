@@ -43,6 +43,8 @@ namespace SlugBase
 
             if (playerNumber >= 0 && playerNumber < game.Players.Count)
                 drawingCharacter = PlayerManager.GetCustomPlayer(game.Players[playerNumber]?.realizedObject as Player);
+            else if (game.IsArenaSession)
+                drawingCharacter = ArenaAdditions.GetSelectedArenaCharacter(game.manager.arenaSetup, playerNumber).player;
             else
                 drawingCharacter = PlayerManager.GetCustomPlayer(game);
 
@@ -62,6 +64,8 @@ namespace SlugBase
 
             if (playerNumber >= 0 && playerNumber < game.Players.Count)
                 drawingCharacter = PlayerManager.GetCustomPlayer(game.Players[playerNumber]?.realizedObject as Player);
+            else if (game.IsArenaSession)
+                drawingCharacter = ArenaAdditions.GetSelectedArenaCharacter(game.manager.arenaSetup, playerNumber).player;
             else
                 drawingCharacter = PlayerManager.GetCustomPlayer(game);
 

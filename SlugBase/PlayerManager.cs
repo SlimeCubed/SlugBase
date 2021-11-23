@@ -477,21 +477,26 @@ namespace SlugBase
             else
             {
                 // In arena, default to playing as survivor
-                if (ArenaAdditions.arenaCharacter.TryGet(manager.arenaSetup, out var ply))
+                var ply = ArenaAdditions.GetSelectedArenaCharacter(manager.arenaSetup);
+                switch (ply.type)
                 {
-                    switch (ply.type)
-                    {
-                        case ArenaAdditions.PlayerDescriptor.Type.SlugBase:
-                            StartGame(self, ply.player);
-                            break;
-                        case ArenaAdditions.PlayerDescriptor.Type.Vanilla:
-                        default:
-                            StartGame(self, 0);
-                            break;
-                    }
+                    case ArenaAdditions.PlayerDescriptor.Type.SlugBase:
+                        StartGame(self, ply.player);
+                        break;
+                    case ArenaAdditions.PlayerDescriptor.Type.Vanilla:
+                    default:
+                        StartGame(self, 0);
+                        break;
                 }
-                else StartGame(self, 0);
             }
+
+            Debug.Log($"Starting game!");
+            Debug.Log($"Selected world character: {ArenaAdditions.GetSelectedArenaCharacter(manager.arenaSetup)}");
+            for(int i = 0; i < 4; i++)
+            {
+                Debug.Log($"Player {i}: {ArenaAdditions.GetSelectedArenaCharacter(manager.arenaSetup, i)}");
+            }
+
             orig(self, manager);
         }
 
