@@ -279,7 +279,10 @@ namespace SlugBase
                     base.Clicked();
 
                     if (!expand)
+                    {
                         expand = true;
+                        menu.PlaySound(SoundID.MENU_Button_Standard_Button_Pressed);
+                    }
                 }
 
                 public override void Singal(MenuObject sender, string message)
@@ -334,6 +337,12 @@ namespace SlugBase
                     selectRect.size = size;
                     portrait.buttonBehav.greyedOut = expand || size.y > -namePlateOffset.y;
                     buttonBehav.greyedOut = size.y > namePlateHeight;
+
+                    // Stop the selector from going offscreen
+                    pos = portrait.pos + namePlateOffset;
+                    float heightAboveScreen = pos.y + size.y - Futile.screen.height;
+                    if (heightAboveScreen > 0f)
+                        pos.y -= heightAboveScreen;
                 }
 
                 public override void GrafUpdate(float timeStacker)
@@ -444,6 +453,8 @@ namespace SlugBase
 
                         characters[Owner.playerNumber] = player;
                     }
+
+                    menu.PlaySound(SoundID.MENU_Button_Successfully_Assigned);
 
                     Singal(this, "SELECT");
                 }
