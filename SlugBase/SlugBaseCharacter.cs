@@ -175,7 +175,7 @@ namespace SlugBase
         /// <returns>True if the save state is this character's.</returns>
         public bool IsMe(SaveState saveState)
         {
-            return SlugcatIndex == saveState.saveStateNumber;
+            return SlugcatIndex == saveState?.saveStateNumber;
         }
 
         // Called when a World or Player Char starts using this
