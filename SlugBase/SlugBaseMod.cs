@@ -3,6 +3,11 @@ using System.IO;
 using System.Collections.Generic;
 using Partiality.Modloader;
 using UnityEngine;
+using System.Security;
+using System.Security.Permissions;
+
+[module: UnverifiableCode]
+[assembly: SecurityPermission(SecurityAction.RequestMinimum, SkipVerification = true)]
 
 namespace SlugBase
 {
@@ -48,7 +53,6 @@ namespace SlugBase
              * TODO:
              * 
              * Scene editor (maybe)
-             * Multi-instance support for arena
              * 
              */
         }
