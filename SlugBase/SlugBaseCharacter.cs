@@ -168,6 +168,16 @@ namespace SlugBase
             return PlayerManager.GetCustomPlayer(game) == this;
         }
 
+        /// <summary>
+        /// Returns whether the given save state is this character's.
+        /// </summary>
+        /// <param name="saveState">The save state to check.</param>
+        /// <returns>True if the save state is this character's.</returns>
+        public bool IsMe(SaveState saveState)
+        {
+            return SlugcatIndex == saveState.saveStateNumber;
+        }
+
         // Called when a World or Player Char starts using this
         internal void EnableInstance()
         {
