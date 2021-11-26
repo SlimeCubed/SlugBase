@@ -104,7 +104,7 @@ namespace SlugBase
             if(!(self is CustomSaveState css))
                 return orig(self);
 
-            StringBuilder sb = new StringBuilder(orig(self));
+            StringBuilder sb = new StringBuilder();
             string customData = css.SaveCustomToString();
             if (!string.IsNullOrEmpty(customData))
             {
@@ -120,7 +120,7 @@ namespace SlugBase
                 sb.Append("<svA>");
             }
 
-            return sb.ToString();
+            return orig(self) + sb.ToString();
         }
 
         private static void SaveState_LoadGame(On.SaveState.orig_LoadGame orig, SaveState self, string str, RainWorldGame game)

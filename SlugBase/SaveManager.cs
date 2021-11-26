@@ -143,8 +143,8 @@ namespace SlugBase
             }));
 
             string savePath = GetSaveFilePath(ply.Name, slot);
-            string vanillaDPSD = self.currentSaveState.deathPersistentSaveData.SaveToString(saveAsIfPlayerDied, saveAsIfPlayerQuit);
             string customDPSD = css.SaveCustomPermanentToString(saveAsIfPlayerDied, saveAsIfPlayerQuit);
+            string vanillaDPSD = self.currentSaveState.deathPersistentSaveData.SaveToString(saveAsIfPlayerDied, saveAsIfPlayerQuit);
 
             string inSave;
             try
