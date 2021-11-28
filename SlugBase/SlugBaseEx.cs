@@ -17,7 +17,7 @@ namespace SlugBase
         public static bool TryGetSave<T>(this Player player, out T save) where T : SaveState
         {
             save = null;
-            return player.room?.game.TryGetSave(out save) ?? false;
+            return player.room?.game?.TryGetSave(out save) ?? false;
         }
 
         /// <summary>
