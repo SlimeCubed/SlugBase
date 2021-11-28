@@ -154,7 +154,7 @@ namespace SlugBase
                 }
 
                 // Custom music
-                if (manager.musicPlayer != null)
+                if (manager.musicPlayer != null && !string.IsNullOrEmpty(builtSlideshow.Music))
                 {
                     self.waitForMusic = builtSlideshow.Music;
                     self.stall = true;
