@@ -45,13 +45,17 @@ namespace SlugBase
         /// <summary>
         /// Creates a scene from a JSON string.
         /// </summary>
-        public CustomScene(SlugBaseCharacter owner, string name, string json) : this(owner, name, json.dictionaryFromJson()) { }
+        public CustomScene(SlugBaseCharacter owner, string name, string json) : this(owner, name, json?.dictionaryFromJson()) { }
 
         /// <summary>
         /// Creates a scene from a JSON object.
         /// </summary>
         public CustomScene(SlugBaseCharacter owner, string name, JsonObj data) : this(owner, name)
         {
+            if (owner == null) throw new ArgumentNullException(nameof(name));
+            if (name == null) throw new ArgumentNullException(nameof(name));
+            if (data == null) throw new ArgumentNullException(nameof(data), "Scene JSON data is null! This may be due to invalid JSON.");
+
             foreach(var pair in data)
                 LoadValue(pair.Key, pair.Value);
         }
