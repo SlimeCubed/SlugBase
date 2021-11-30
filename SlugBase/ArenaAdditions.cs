@@ -59,7 +59,11 @@ namespace SlugBase
                     }
                     else
                     {
-                        if (i >= characters.Count || !selectedChar.Equals(characters[i])) break;
+                        if (i >= characters.Count || !selectedChar.Equals(characters[i]))
+                        {
+                            selectedChar = null;
+                            break;
+                        }
                     }
                 }
 
