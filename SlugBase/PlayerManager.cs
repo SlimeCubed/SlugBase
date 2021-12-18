@@ -112,7 +112,8 @@ namespace SlugBase
         /// <returns>The <see cref="SlugBaseCharacter"/> used for this player or <c>null</c> if a custom character is not being used.</returns>
         public static SlugBaseCharacter GetCustomPlayer(Player player)
         {
-            if (player == null) return null;
+            if (player == null)
+                return null;
 
             var game = player.abstractCreature.world.game;
 
@@ -201,6 +202,7 @@ namespace SlugBase
 
         #region HOOKS
 
+        // Enable SlugBaseCharacters when their players are realized
         private static void AbstractCreature_Realize(On.AbstractCreature.orig_Realize orig, AbstractCreature self)
         {
             orig(self);
@@ -208,10 +210,11 @@ namespace SlugBase
             if (self.realizedObject is Player ply)
             {
                 Debug.Log($"Player realized! Num {ply.playerState.playerNumber}, name {ply.slugcatStats.name}, char {ply.playerState.slugcatCharacter}");
-                AddCustomPlayer(self.world.game, self, GetCustomPlayer(ply));
+                UpdateCustomPlayer(self.world.game, self, GetCustomPlayer(ply));
             }
         }
 
+        // Call StartNewGame once the first room loads
         private static void Room_Loaded(On.Room.orig_Loaded orig, Room self)
         {
             var cha = GetCustomPlayer(self.game);
@@ -516,14 +519,15 @@ namespace SlugBase
             setup.worldCharacter = customPlayer;
         }
 
-        private static void AddCustomPlayer(RainWorldGame game, AbstractCreature player, SlugBaseCharacter customPlayer)
+        private static void UpdateCustomPlayer(RainWorldGame game, AbstractCreature player, SlugBaseCharacter customPlayer)
         {
             if (!gameSetups.TryGetValue(game, out GameSetup setup))
                 gameSetups[game] = setup = new GameSetup();
 
-            customPlayer?.EnableInstance();
-            if (!setup.playerCharacters.ContainsKey(player))
+            if (!setup.playerCharacters.TryGetValue(player, out var oldCha) || oldCha != customPlayer)
             {
+                oldCha?.DisableInstance();
+                customPlayer?.EnableInstance();
                 setup.playerCharacters[player] = customPlayer;
                 if (player.realizedObject is Player ply)
                     customPlayer?.PlayerAdded(game, ply);

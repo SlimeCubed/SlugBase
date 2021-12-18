@@ -65,6 +65,7 @@ namespace SlugBase
 
             // Core changes
             CustomSceneManager.ApplyHooks();
+            MultiplayerTweaks.ApplyHooks();
             PlayerColors.ApplyHooks();
             PlayerManager.ApplyHooks();
             SaveManager.ApplyHooks();
