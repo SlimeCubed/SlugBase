@@ -17,7 +17,16 @@ namespace SlugBase.Compatibility
         {
             try
             {
-                ApplyInternal();
+                ApplyLegacyFixes();
+            }
+            catch
+            {
+                // This will throw if Jolly is not installed
+            }
+
+            try
+            {
+                ApplyIntegrations();
             }
             catch
             {
@@ -25,7 +34,53 @@ namespace SlugBase.Compatibility
             }
         }
 
-        private static void ApplyInternal()
+        private static void ApplyIntegrations()
+        {
+            new Hook(
+                Type.GetType("JollyCoop.HUDHK, JollyCoop").GetMethod("GetPlayerColor", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static),
+                new Func<Func<Player, Color>, Player, Color>(HUDHK_GetPlayerColor)
+            );
+
+            var playerIconType = Type.GetType("JollyCoop.PlayerMeter+PlayerIcon, JollyCoop");
+            _PlayerIcon_color = playerIconType.GetField("color", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+            _PlayerIcon_playerNumber = playerIconType.GetField("playerNumber", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+            _PlayerIcon_meter = playerIconType.GetField("meter", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+            new Hook(
+                playerIconType.GetMethod("Update", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance),
+                new Action<Action<object>, object>(PlayerIcon_Update)
+            );
+        }
+
+        private static FieldInfo _PlayerIcon_color;
+        private static FieldInfo _PlayerIcon_playerNumber;
+        private static FieldInfo _PlayerIcon_meter;
+        // The original method sets the HUD color without using HUDHK.GetPlayerColor
+        private static void PlayerIcon_Update(Action<object> orig, object self)
+        {
+            orig(self);
+            HUD.HudPart meter = (HUD.HudPart)_PlayerIcon_meter.GetValue(self);
+            if (meter.hud.owner is Player ply1)
+            {
+                var game = ply1.abstractPhysicalObject.world.game;
+                int plyNum = (int)_PlayerIcon_playerNumber.GetValue(self);
+                if (game.IsStorySession && plyNum >= 0 && plyNum < game.Players.Count)
+                {
+                    var iconPly = game.Players[plyNum]?.realizedObject as Player;
+                    if (iconPly != null && PlayerManager.GetCustomPlayer(iconPly) != null)
+                        _PlayerIcon_color.SetValue(self, PlayerManager.GetSlugcatColor(iconPly));
+                }
+            }
+        }
+
+        // Jolly passes in SlugcatStats.name to GetPlayerColor when it should pass in PlayerState.slugcatCharacter
+        // These will always be the same for Jolly, but SlugBase can cause them to be misaligned
+        private static Color HUDHK_GetPlayerColor(Func<Player, Color> orig, Player self)
+        {
+            var cha = PlayerManager.GetCustomPlayer(self);
+            return cha != null ? PlayerManager.GetSlugcatColor(self) : orig(self);
+        }
+
+        private static void ApplyLegacyFixes()
         {
             var jolly = (JollyMod)Partiality.PartialityManager.Instance.modManager.loadedMods.First(mod => mod is JollyMod);
             if (jolly.Version == "1.6.6" || jolly.Version == "1.6.7")

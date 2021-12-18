@@ -25,6 +25,7 @@ namespace SlugBase
             On.PlayerGraphics.ApplyPalette += (orig, self, a, b, c) => DrawingPlayer(self.player, () => orig(self, a, b, c));
             On.PlayerGraphics.DrawSprites += (orig, self, a, b, c, d) => DrawingPlayer(self.player, () => orig(self, a, b, c, d));
             On.PlayerGraphics.Update += (orig, self) => DrawingPlayer(self.player, () => orig(self));
+            On.Player.ShortCutColor += (orig, self) => DrawingPlayer(self, () => orig(self));
 
             new Hook(
                 typeof(OverseerGraphics).GetProperty(nameof(OverseerGraphics.MainColor)).GetGetMethod(),
