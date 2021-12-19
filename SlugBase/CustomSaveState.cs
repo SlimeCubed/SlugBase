@@ -106,19 +106,14 @@ namespace SlugBase
 
             StringBuilder sb = new StringBuilder();
             string customData = css.SaveCustomToString();
-            if (!string.IsNullOrEmpty(customData))
-            {
-                sb.Append("SLUGBASE<svB>");
-                sb.Append(customData);
-                sb.Append("<svA>");
-            }
+            sb.Append("SLUGBASE<svB>");
+            sb.Append(customData ?? "");
+            sb.Append("<svA>");
+
             customData = css.SaveCustomPermanentToString(false, false);
-            if (!string.IsNullOrEmpty(customData))
-            {
-                sb.Append("SLUGBASEPERSISTENT<svB>");
-                sb.Append(customData);
-                sb.Append("<svA>");
-            }
+            sb.Append("SLUGBASEPERSISTENT<svB>");
+            sb.Append(customData ?? "");
+            sb.Append("<svA>");
 
             return orig(self) + sb.ToString();
         }

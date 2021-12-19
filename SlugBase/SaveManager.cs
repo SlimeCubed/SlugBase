@@ -162,11 +162,13 @@ namespace SlugBase
             {
                 string[] pair = Regex.Split(array2[j], "<svB>");
                 // Save vanilla DPSD
-                if (pair[0] == "DEATHPERSISTENTSAVEDATA" && !string.IsNullOrEmpty(vanillaDPSD))
+                if (pair[0] == "DEATHPERSISTENTSAVEDATA")
                     outSave.Append("DEATHPERSISTENTSAVEDATA<svB>" + vanillaDPSD + "<svA>");
+                
                 // Save custom DPSD
-                else if (pair[0] == "SLUGBASEPERSISTENT" && !string.IsNullOrEmpty(customDPSD))
+                else if (pair[0] == "SLUGBASEPERSISTENT")
                     outSave.Append("SLUGBASEPERSISTENT<svB>" + customDPSD + "<svA>");
+
                 // Echo any other data
                 else
                     outSave.Append(array2[j] + "<svA>");
