@@ -15,7 +15,7 @@ namespace BareMinimum
         public BareMinimum()
         {
             ModID = "Bare Minimum Example Slugcat";
-            Version = "1.0";
+            Version = "1.1";
             author = "Slime_Cubed";
         }
 
@@ -27,7 +27,7 @@ namespace BareMinimum
 
     public class BareMinimumSlugcat : SlugBaseCharacter
     {
-        public BareMinimumSlugcat() : base("Bare Minimum", FormatVersion.V1, 0)
+        public BareMinimumSlugcat() : base("Bare Minimum", FormatVersion.V1, 0, true)
         {
         }
 

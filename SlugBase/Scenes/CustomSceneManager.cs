@@ -14,8 +14,8 @@ namespace SlugBase
         // Passed in as a folder to some functions to mark that they should load a custom resource instead
         internal const string resourceFolderName = "SlugBase Resources";
 
-        private static CustomScene sceneOverride;
-        private static CustomSlideshow slideshowOverride;
+        private static ResourceOverride<CustomScene> sceneOverride;
+        private static ResourceOverride<CustomSlideshow> slideshowOverride;
 
         internal static AttachedField<MenuIllustration, SceneImage> customRep = new AttachedField<MenuIllustration, SceneImage>();
 
@@ -83,17 +83,7 @@ namespace SlugBase
         private static void SlideShow_ctor(On.Menu.SlideShow.orig_ctor orig, SlideShow self, ProcessManager manager, SlideShow.SlideShowID slideShowID)
         {
             // Automatically override slideshows if the current character has a slideshow by the same name
-            SlugBaseCharacter currentPlayer;
-            if (PlayerManager.UsingCustomCharacter) currentPlayer = PlayerManager.CurrentCharacter;
-            else
-            {
-                int index;
-                if (manager.currentMainLoop is RainWorldGame rwg)
-                    index = rwg.StoryCharacter;
-                else
-                    index = manager.rainWorld.progression.PlayingAsSlugcat;
-                currentPlayer = PlayerManager.GetCustomPlayer(index);
-            }
+            SlugBaseCharacter currentPlayer = PlayerManager.GetCustomPlayer(manager.rainWorld.progression.PlayingAsSlugcat);
 
             if (currentPlayer != null)
             {
@@ -122,11 +112,23 @@ namespace SlugBase
 
                 // Load a custom scene
 
-                SlugBaseCharacter owner = slideshowOverride.Owner;
-                List<SlideshowSlide> slides = slideshowOverride.Slides;
+                SlugBaseCharacter owner = slideshowOverride.Character;
+                CustomSlideshow builtSlideshow;
+                try
+                {
+                    builtSlideshow = owner.BuildSlideshow(slideshowOverride.ResourceName);
+                }
+                catch(Exception e)
+                {
+                    Debug.LogError($"Failed to load slideshow: {slideshowOverride.ResourceName}");
+                    Debug.LogException(e);
+                    return;
+                }
+                slideshowOverride.Load(builtSlideshow);
+                List<SlideshowSlide> slides = builtSlideshow.Slides;
 
                 // Chose a destination process
-                if (slideshowOverride.NextProcess == null)
+                if (builtSlideshow.NextProcess == null)
                 {
                     switch (slideShowID)
                     {
@@ -148,13 +150,13 @@ namespace SlugBase
                 }
                 else
                 {
-                    self.nextProcess = slideshowOverride.NextProcess.Value;
+                    self.nextProcess = builtSlideshow.NextProcess.Value;
                 }
 
                 // Custom music
-                if (manager.musicPlayer != null)
+                if (manager.musicPlayer != null && !string.IsNullOrEmpty(builtSlideshow.Music))
                 {
-                    self.waitForMusic = slideshowOverride.Music;
+                    self.waitForMusic = builtSlideshow.Music;
                     self.stall = true;
                     manager.musicPlayer.MenuRequestsSong(self.waitForMusic, 1.5f, 40f);
                 }
@@ -178,10 +180,10 @@ namespace SlugBase
                     for (int i = 0; i < self.preloadedScenes.Length; i++)
                     {
                         MenuScene.SceneID id = MenuScene.SceneID.Empty;
-                        if (slideshowOverride.Owner.HasScene(slides[i].SceneName))
+                        if (builtSlideshow.Owner.HasScene(slides[i].SceneName))
                         {
                             // Prioritize this character's scenes
-                            OverrideNextScene(slideshowOverride.Owner, slideshowOverride.Slides[i].SceneName);
+                            OverrideNextScene(builtSlideshow.Owner, builtSlideshow.Slides[i].SceneName, slideshowOverride.Filter);
                         }
                         else
                         {
@@ -242,17 +244,7 @@ namespace SlugBase
         private static void MenuScene_BuildScene(On.Menu.MenuScene.orig_BuildScene orig, MenuScene self)
         {
             // Automatically override scenes if the current character has a scene by the same name
-            SlugBaseCharacter currentPlayer;
-            if (PlayerManager.UsingCustomCharacter) currentPlayer = PlayerManager.CurrentCharacter;
-            else
-            {
-                int index;
-                if (self.menu.manager.currentMainLoop is RainWorldGame rwg)
-                    index = rwg.StoryCharacter;
-                else
-                    index = self.menu.manager.rainWorld.progression.PlayingAsSlugcat;
-                currentPlayer = PlayerManager.GetCustomPlayer(index);
-            }
+            SlugBaseCharacter currentPlayer = PlayerManager.GetCustomPlayer(self.menu.manager.rainWorld.progression.PlayingAsSlugcat);
 
             if (currentPlayer != null)
             {
@@ -267,9 +259,15 @@ namespace SlugBase
                 {
                     self.sceneFolder = resourceFolderName;
 
+                    var owner = sceneOverride.Character;
+                    var builtScene = owner.BuildScene(sceneOverride.ResourceName);
+                    sceneOverride.Load(builtScene);
+                    if (sceneOverride.Filter != null)
+                        builtScene.ApplyFilter(sceneOverride.Filter);
+
                     // Check for flatmode support
                     bool hasFlatmode = false;
-                    foreach (var img in sceneOverride.Images)
+                    foreach (var img in builtScene.Images)
                     {
                         if (img.HasTag("FLATMODE"))
                         {
@@ -279,9 +277,9 @@ namespace SlugBase
                     }
 
                     // Load all images into the scene
-                    for (int imgIndex = 0; imgIndex < sceneOverride.Images.Count; imgIndex++)
+                    for (int imgIndex = 0; imgIndex < builtScene.Images.Count; imgIndex++)
                     {
-                        var img = sceneOverride.Images[imgIndex];
+                        var img = builtScene.Images[imgIndex];
 
                         // Hide disabled images
                         if (!img.Enabled) continue;
@@ -297,7 +295,7 @@ namespace SlugBase
                         // Parse alpha
                         float alpha = img.GetProperty<float?>("alpha") ?? 1f;
 
-                        string assetPath = $"{sceneOverride.Owner.Name}\\Scenes\\{sceneOverride.Name}\\{img.assetName}";
+                        string assetPath = $"{owner.Name}\\Scenes\\{builtScene.Name}\\{img.assetName}";
                         Vector2 pos = img.Pos;
                         bool crisp = img.HasTag("CRISP");
                         string shaderName = img.GetProperty<string>("shader");
@@ -344,20 +342,6 @@ namespace SlugBase
                             if (crisp) illust.sprite.element.atlas.texture.filterMode = FilterMode.Point;
                         }
 
-                        // Add idle depths
-                        if(self is InteractiveMenuScene ims)
-                        {
-                            ims.idleDepths = new List<float>();
-                            List<object> depths = sceneOverride.GetProperty<List<object>>("idledepths");
-                            if(depths != null)
-                            {
-                                for (int i = 0; i < depths.Count; i++) {
-                                    if (depths[i] is double depth)
-                                        ims.idleDepths.Add((float)depth);
-                                }
-                            }
-                        }
-
                         // Apply tags
                         if (shader != null) illust.sprite.shader = shader;
                         illust.setAlpha = alpha;
@@ -365,6 +349,21 @@ namespace SlugBase
 
                         // Link back to the custom scene image
                         customRep[illust] = img;
+                    }
+
+                    // Add idle depths
+                    if (self is InteractiveMenuScene ims)
+                    {
+                        ims.idleDepths = new List<float>();
+                        List<object> depths = builtScene.GetProperty<List<object>>("idledepths");
+                        if (depths != null)
+                        {
+                            for (int i = 0; i < depths.Count; i++)
+                            {
+                                if (depths[i] is double depth)
+                                    ims.idleDepths.Add((float)depth);
+                            }
+                        }
                     }
 
                 }
@@ -378,12 +377,9 @@ namespace SlugBase
 
         #endregion Hooks
 
-        internal static CustomScene OverrideNextScene(SlugBaseCharacter ply, string customSceneName, SceneImageFilter filter = null)
+        internal static ResourceOverride<CustomScene> OverrideNextScene(SlugBaseCharacter ply, string customSceneName, SceneImageFilter filter = null)
         {
-            sceneOverride = ply.BuildScene(customSceneName);
-            if (filter != null)
-                sceneOverride.ApplyFilter(filter);
-            return sceneOverride;
+            return sceneOverride = new ResourceOverride<CustomScene>(ply, customSceneName, filter);
         }
 
         internal static void ClearSceneOverride()
@@ -391,10 +387,9 @@ namespace SlugBase
             sceneOverride = null;
         }
 
-        internal static CustomSlideshow OverrideNextSlideshow(SlugBaseCharacter ply, string customSlideshowName)
+        internal static ResourceOverride<CustomSlideshow> OverrideNextSlideshow(SlugBaseCharacter ply, string customSlideshowName, SceneImageFilter filter = null)
         {
-            slideshowOverride = ply.BuildSlideshow(customSlideshowName);
-            return slideshowOverride;
+            return slideshowOverride = new ResourceOverride<CustomSlideshow>(ply, customSlideshowName, filter);
         }
 
         internal static void ClearSlideshowOverride()
@@ -437,6 +432,29 @@ namespace SlugBase
             }
 
             return tex;
+        }
+
+        internal class ResourceOverride<T>
+        {
+            public SlugBaseCharacter Character { get; }
+            public string ResourceName { get; }
+            public SceneImageFilter Filter { get; }
+
+            public event LoadHandler OnLoad;
+
+            public ResourceOverride(SlugBaseCharacter character, string resource, SceneImageFilter filter = null)
+            {
+                Character = character;
+                ResourceName = resource;
+                Filter = filter;
+            }
+
+            public delegate void LoadHandler(T loadedResource);
+
+            internal void Load(T builtScene)
+            {
+                OnLoad?.Invoke(builtScene);
+            }
         }
     }
 

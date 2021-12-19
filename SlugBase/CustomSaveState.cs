@@ -104,23 +104,18 @@ namespace SlugBase
             if(!(self is CustomSaveState css))
                 return orig(self);
 
-            StringBuilder sb = new StringBuilder(orig(self));
+            StringBuilder sb = new StringBuilder();
             string customData = css.SaveCustomToString();
-            if (!string.IsNullOrEmpty(customData))
-            {
-                sb.Append("SLUGBASE<svB>");
-                sb.Append(customData);
-                sb.Append("<svA>");
-            }
-            customData = css.SaveCustomPermanentToString(false, false);
-            if (!string.IsNullOrEmpty(customData))
-            {
-                sb.Append("SLUGBASEPERSISTENT<svB>");
-                sb.Append(customData);
-                sb.Append("<svA>");
-            }
+            sb.Append("SLUGBASE<svB>");
+            sb.Append(customData ?? "");
+            sb.Append("<svA>");
 
-            return sb.ToString();
+            customData = css.SaveCustomPermanentToString(false, false);
+            sb.Append("SLUGBASEPERSISTENT<svB>");
+            sb.Append(customData ?? "");
+            sb.Append("<svA>");
+
+            return orig(self) + sb.ToString();
         }
 
         private static void SaveState_LoadGame(On.SaveState.orig_LoadGame orig, SaveState self, string str, RainWorldGame game)
@@ -172,7 +167,7 @@ namespace SlugBase
             return DataToString(data);
         }
 
-        private static Dictionary<string, string> DataFromString(string dataString)
+        internal static Dictionary<string, string> DataFromString(string dataString)
         {
             var data = new Dictionary<string, string>();
             if (string.IsNullOrEmpty(dataString)) return data;
@@ -190,7 +185,7 @@ namespace SlugBase
             return data;
         }
 
-        private static string DataToString(Dictionary<string, string> data)
+        internal static string DataToString(Dictionary<string, string> data)
         {
             StringBuilder sb = new StringBuilder();
             foreach(var pair in data)

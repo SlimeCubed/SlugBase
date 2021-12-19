@@ -16,19 +16,7 @@ namespace ExampleSlugcat
 
         public override void Load(Dictionary<string, string> data)
         {
-            try
-            {
-                foreach (var pair in data)
-                {
-                    switch (pair.Key)
-                    {
-                        case "turbo": isTurbo = bool.Parse(pair.Value); break;
-                    }
-                }
-            } catch(Exception e)
-            {
-                throw new FormatException("Failed to load Sprinter save!", e);
-            }
+            isTurbo = data.TryGetValue("turbo", out string temp) ? bool.Parse(temp) : false;
         }
 
         public override void Save(Dictionary<string, string> data)

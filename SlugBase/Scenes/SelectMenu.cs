@@ -9,9 +9,8 @@ using System.IO;
 using Menu;
 using HUD;
 using System.Runtime.CompilerServices;
-
-[module: UnverifiableCode]
-[assembly: SecurityPermission(SecurityAction.RequestMinimum, SkipVerification = true)]
+using System.Linq;
+using RWCustom;
 
 namespace SlugBase
 {
@@ -19,6 +18,9 @@ namespace SlugBase
 
     internal static class SelectMenu
     {
+        private static bool selectMenuShimActive = false;
+        private static float altRestartUp = 0f;
+
         public static void ApplyHooks()
         {
             On.Menu.SlugcatSelectMenu.UpdateStartButtonText += SlugcatSelectMenu_UpdateStartButtonText;
@@ -28,7 +30,9 @@ namespace SlugBase
             );
             On.Menu.SlugcatSelectMenu.GetSaveGameData += SlugcatSelectMenu_GetSaveGameData;
             On.Menu.SlugcatSelectMenu.MineForSaveData += SlugcatSelectMenu_MineForSaveData;
+            On.Menu.SlugcatSelectMenu.Update += SlugcatSelectMenu_Update;
             On.Menu.SlugcatSelectMenu.ctor += SlugcatSelectMenu_ctor;
+            On.Menu.HoldButton.ctor += HoldButton_ctor;
             On.Menu.SlugcatSelectMenu.SlugcatPage.AddImage += SlugcatPage_AddImage;
             On.Menu.SlugcatSelectMenu.SlugcatPage.ctor += SlugcatPage_ctor;
             On.Menu.SlugcatSelectMenu.SlugcatPageNewGame.ctor += SlugcatPageNewGame_ctor;
@@ -92,10 +96,51 @@ namespace SlugBase
                         ascended        = save.deathPersistentSaveData.ascended
                     };
                 }
-                int slot = manager.rainWorld.options.saveSlot;
-                return SaveManager.GetCustomSaveData(manager.rainWorld, ply.Name, slot);
+                return SaveManager.GetCustomSaveData(manager.rainWorld, ply.Name, manager.rainWorld.options.saveSlot);
             }
             return orig(manager, slugcat);
+        }
+
+        // Lock the select button when necessary
+        private static void SlugcatSelectMenu_Update(On.Menu.SlugcatSelectMenu.orig_Update orig, SlugcatSelectMenu self)
+        {
+            // This is before orig because it must fetch the character before scrolling logic applies
+            // Otherwise, there's a single frame where the button flashes
+            SlugBaseCharacter ply = PlayerManager.GetCustomPlayer(self.slugcatColorOrder[self.slugcatPageIndex]);
+
+            if (ply == null)
+            {
+                altRestartUp = 0f;
+                orig(self);
+            }
+            else
+            {
+                var state = ply.GetSelectMenuState(self);
+
+                if (state == SlugBaseCharacter.SelectMenuAccessibility.MustRestart && !self.restartAvailable)
+                {
+                    altRestartUp = Mathf.Max(self.restartUp, Custom.LerpAndTick(altRestartUp, 1f, 0.07f, 0.025f));
+                    self.restartUp = altRestartUp;
+                    if (altRestartUp == 1f)
+                        self.restartAvailable = true;
+                }
+                else
+                    altRestartUp = 0f;
+
+                orig(self);
+
+                bool locked = false;
+                switch (state)
+                {
+                    case SlugBaseCharacter.SelectMenuAccessibility.Locked: locked = true; break;
+                    case SlugBaseCharacter.SelectMenuAccessibility.Hidden: locked = true; break;
+                    case SlugBaseCharacter.SelectMenuAccessibility.MustRestart: locked = !self.restartChecked; break;
+                }
+
+                if (locked) self.startButton.GetButtonBehavior.greyedOut = true;
+
+                
+            }
         }
 
         // Change some data associated with custom slugcat pages
@@ -105,7 +150,7 @@ namespace SlugBase
             SlugBaseCharacter ply = PlayerManager.GetCustomPlayer(pageIndex);
             if (ply != null) {
                 self.colorName = ply.Name;
-                self.effectColor = ply.SlugcatColor() ?? Color.white;
+                self.effectColor = ply.SlugcatColorInternal(slugcatNumber) ?? Color.white;
             }
         }
 
@@ -160,33 +205,39 @@ namespace SlugBase
 
 
             // Load a custom character's select screen from resources
-            CustomScene scene = OverrideNextScene(ply, sceneName, img =>
+            var sceneOverride = OverrideNextScene(ply, sceneName, img =>
             {
                 if (img.HasTag("MARK") && !self.HasMark) return false;
                 if (img.HasTag("GLOW") && !self.HasGlow) return false;
                 return true;
             });
 
-            // Parse selectmenux and selectmenuy
-            self.sceneOffset.x = scene.GetProperty<float?>("selectmenux") ?? 0f;
-            self.sceneOffset.y = scene.GetProperty<float?>("selectmenuy") ?? 0f;
-            Debug.Log($"Scene offset for {ply.Name}: {self.sceneOffset}");
+            MarkImage mark = null;
+            GlowImage glow = null;
+            sceneOverride.OnLoad += (scene) =>
+            {
+                // Parse selectmenux and selectmenuy
+                self.sceneOffset.x = scene.GetProperty<float?>("selectmenux") ?? 0f;
+                self.sceneOffset.y = scene.GetProperty<float?>("selectmenuy") ?? 0f;
+                Debug.Log($"Scene offset for {ply.Name}: {self.sceneOffset}");
 
-            // Slugcat depth, used for positioning the glow and mark
-            self.slugcatDepth = scene.GetProperty<float?>("slugcatdepth") ?? 3f;
+                // Slugcat depth, used for positioning the glow and mark
+                self.slugcatDepth = scene.GetProperty<float?>("slugcatdepth") ?? 3f;
 
-            // Add mark
-            MarkImage mark = new MarkImage(scene, self.slugcatDepth + 0.1f);
-            scene.InsertImage(mark);
+                // Add mark
+                mark = new MarkImage(scene, self.slugcatDepth + 0.1f);
+                scene.InsertImage(mark);
 
-            // Add glow
-            GlowImage glow = new GlowImage(scene, self.slugcatDepth + 0.1f);
-            scene.InsertImage(glow);
+                // Add glow
+                glow = new GlowImage(scene, self.slugcatDepth + 0.1f);
+                scene.InsertImage(glow);
+            };
 
             try
             {
                 self.slugcatImage = new InteractiveMenuScene(self.menu, self, MenuScene.SceneID.Slugcat_White); // This scene will be immediately overwritten
-            } finally { ClearSceneOverride(); }
+            }
+            finally { ClearSceneOverride(); }
             self.subObjects.Add(self.slugcatImage);
 
             // Find the relative mark and glow positions
@@ -195,58 +246,67 @@ namespace SlugBase
         }
 
         // Add custom slugcat select screens
-        private static void SlugcatSelectMenu_ctor(On.Menu.SlugcatSelectMenu.orig_ctor orig, Menu.SlugcatSelectMenu self, ProcessManager manager)
+        private static void SlugcatSelectMenu_ctor(On.Menu.SlugcatSelectMenu.orig_ctor orig, SlugcatSelectMenu self, ProcessManager manager)
         {
-            int selectedSlugcat = manager.rainWorld.progression.miscProgressionData.currentlySelectedSinglePlayerSlugcat;
+            try
+            {
+                selectMenuShimActive = true;
+                orig(self, manager);
+            }
+            finally
+            {
+                selectMenuShimActive = false;
+            }
+        }
 
-            orig(self, manager);
+        // Shim to add the slugcat pages at the correct layer
+        // The hold button is the first object that needs to be layed above the scenes
+        private static void HoldButton_ctor(On.Menu.HoldButton.orig_ctor orig, HoldButton self, Menu.Menu menu, MenuObject owner, string displayText, string singalText, Vector2 pos, float fillTime)
+        {
+            if (selectMenuShimActive && singalText == "START" && menu is SlugcatSelectMenu ssm)
+            {
+                AddSlugBaseScenes(ssm);
+                selectMenuShimActive = false;
+            }
+            orig(self, menu, owner, displayText, singalText, pos, fillTime);
+        }
+
+        // Add all SlugBase characters to the select screen
+        private static void AddSlugBaseScenes(SlugcatSelectMenu self)
+        {
+            int selectedSlugcat = self.manager.rainWorld.progression.miscProgressionData.currentlySelectedSinglePlayerSlugcat;
 
             List<SlugBaseCharacter> plys = PlayerManager.customPlayers;
+            List<SlugBaseCharacter> visiblePlys = plys.Where(c => c.GetSelectMenuState(self) != SlugBaseCharacter.SelectMenuAccessibility.Hidden).ToList();
+
             int origLength = self.slugcatColorOrder.Length;
 
-            // Add all SlugBase characters to the select screen
-            // All other player mods should change this array, so we have a nice lower bound for indices we can take
-
-            // Find the next available slugcat index, skipping Nightcat
-            ref int firstCustomIndex = ref SlugBaseMod.FirstCustomIndex;
-
-            firstCustomIndex = 4;
-            
-            // Take color order into account
+            // First, try to find the highest taken slugcat index
             for (int i = 0; i < self.slugcatColorOrder.Length; i++)
-                firstCustomIndex = Math.Max(self.slugcatColorOrder[i] + 1, firstCustomIndex);
-            
-            // Take slugcat names into account
-            foreach(SlugcatStats.Name name in Enum.GetValues(typeof(SlugcatStats.Name)))
-                firstCustomIndex = Math.Max((int)name + 1, firstCustomIndex);
+                SlugBaseMod.FirstCustomIndex = Math.Max(self.slugcatColorOrder[i] + 1, SlugBaseMod.FirstCustomIndex);
 
-            int nextCustomIndex = firstCustomIndex;
-
-            // Add SlugBase characters to the page order and assign empty slots a default value
-            Array.Resize(ref self.slugcatColorOrder, origLength + plys.Count);
-            for(int i = origLength; i < self.slugcatColorOrder.Length; i++)
-                self.slugcatColorOrder[i] = -1;
-
+            // Assign each character a unique index
+            int nextCustomIndex = SlugBaseMod.FirstCustomIndex;
             for (int i = 0; i < plys.Count; i++)
-            {
-                // Assign each player a unique index, then save it to the page order
-                // This will cause weird behavior if the user skips over the title screen using EDT, so... don't do that
-                self.slugcatColorOrder[origLength + i] = nextCustomIndex;
                 plys[i].SlugcatIndex = nextCustomIndex++;
-            }
+
+            // Add SlugBase characters to the page order
+            Array.Resize(ref self.slugcatColorOrder, origLength + visiblePlys.Count);
+            for (int i = origLength; i < self.slugcatColorOrder.Length; i++)
+                self.slugcatColorOrder[i] = visiblePlys[i - origLength].SlugcatIndex;
 
             // Retrieve save data
-            Array.Resize(ref self.saveGameData, origLength + plys.Count);
+            Array.Resize(ref self.saveGameData, origLength + visiblePlys.Count);
 
-            for(int i = 0; i < plys.Count; i++)
+            for (int i = 0; i < visiblePlys.Count; i++)
             {
-                self.saveGameData[origLength + i] = SlugcatSelectMenu.MineForSaveData(self.manager, plys[i].SlugcatIndex);
+                self.saveGameData[origLength + i] = SlugcatSelectMenu.MineForSaveData(self.manager, visiblePlys[i].SlugcatIndex);
             }
 
             // Add a new page to the menu
-            Array.Resize(ref self.slugcatPages, origLength + plys.Count);
+            Array.Resize(ref self.slugcatPages, origLength + visiblePlys.Count);
 
-            for(int i = 0; i < plys.Count; i++)
+            for (int i = 0; i < visiblePlys.Count; i++)
             {
                 int o = origLength + i;
                 if (self.saveGameData[o] != null)
@@ -263,10 +323,6 @@ namespace SlugBase
                     self.slugcatPageIndex = o;
 
                 self.pages.Add(self.slugcatPages[o]);
-
-                // Make sure the start button reflects the changed slugcat index
-                self.UpdateStartButtonText();
-                self.UpdateSelectedSlugcatInMiscProg();
             }
         }
 
