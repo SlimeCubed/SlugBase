@@ -171,7 +171,6 @@ namespace SlugBase.Compatibility
                 {
                     if (PlayerHK.stats[playerNumber] == null)
                     {
-                        Debug.Log($"Made new stats: {playerChar}");
                         PlayerHK.stats[playerNumber] = new SlugcatStats(playerChar, self.Malnourished);
                         PlayerHK.stats[playerNumber].foodToHibernate = globalStats.foodToHibernate;
                         PlayerHK.stats[playerNumber].maxFood = globalStats.maxFood;
