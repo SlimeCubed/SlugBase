@@ -7,20 +7,20 @@ using UnityEngine;
 using System.Linq;
 using MonoMod.RuntimeDetour;
 using MenuColors = Menu.Menu.MenuColors;
+using SlugBase.Config;
 
 namespace SlugBase
 {
     /// <summary>
     /// Controls added arena mode settings and functionality.
     /// </summary>
-    public static class ArenaAdditions
+    public static partial class ArenaAdditions
     {
-        internal static readonly AttachedField<ArenaSetup, List<PlayerDescriptor>> arenaCharacters = new AttachedField<ArenaSetup, List<PlayerDescriptor>>();
+        private static readonly AttachedField<ArenaSetup, CharacterSelectGroup> arenaCharacters = new AttachedField<ArenaSetup, CharacterSelectGroup>();
         private static readonly AttachedField<AbstractCreature, SlugcatStats> arenaStats = new AttachedField<AbstractCreature, SlugcatStats>();
 
         private static readonly PlayerDescriptor survivorDesc = new PlayerDescriptor(0);
         private static string arenaSettingsPath;
-
 
         internal static void ApplyHooks()
         {
@@ -44,8 +44,7 @@ namespace SlugBase
         public static PlayerDescriptor GetSelectedArenaCharacter(ArenaSetup setup)
         {
             if (setup != null
-                && arenaCharacters.TryGet(setup, out var characters)
-                && characters?.Count > 0)
+                && arenaCharacters.TryGet(setup, out var characters))
             {
                 PlayerDescriptor selectedChar = null;
                 for (int i = 0; i < setup.playersJoined.Length; i++)
@@ -54,12 +53,11 @@ namespace SlugBase
 
                     if (selectedChar == null)
                     {
-                        if (i >= characters.Count) break;
-                        selectedChar = characters[i];
+                        selectedChar = characters.GetPlayer(i);
                     }
                     else
                     {
-                        if (i >= characters.Count || !selectedChar.Equals(characters[i]))
+                        if (selectedChar != characters.GetPlayer(i))
                         {
                             selectedChar = null;
                             break;
@@ -82,13 +80,10 @@ namespace SlugBase
         /// <returns>A representation of the selected arena character.</returns>
         public static PlayerDescriptor GetSelectedArenaCharacter(ArenaSetup setup, int playerNumber)
         {
-            if (setup == null
-                || !arenaCharacters.TryGet(setup, out var characters)
-                || characters == null
-                || playerNumber < 0 || playerNumber >= characters.Count)
+            if (setup == null || !arenaCharacters.TryGet(setup, out var characters))
                 return GetSelectedArenaCharacter(setup);
-
-            return characters[playerNumber];
+            else
+                return characters.GetPlayer(playerNumber);
         }
 
         #region Hooks
@@ -137,7 +132,7 @@ namespace SlugBase
         {
             orig(self);
             if (arenaCharacters.TryGet(self, out var characters))
-                File.WriteAllLines(arenaSettingsPath, characters.Select(c => c.ToString()).ToArray());
+                File.WriteAllText(arenaSettingsPath, characters.ToString());
             else
                 File.Delete(arenaSettingsPath);
         }
@@ -147,14 +142,12 @@ namespace SlugBase
             orig(self);
             try
             {
-                var characters = arenaCharacters[self] = new List<PlayerDescriptor>();
-
-                foreach(var line in File.ReadAllLines(arenaSettingsPath))
-                    characters.Add(PlayerDescriptor.FromString(line));
+                var characters = arenaCharacters[self] = CharacterSelectGroup.FromString(File.ReadAllText(arenaSettingsPath));
             }
-            catch(Exception e)
+            catch //(Exception e)
             {
-                Debug.LogException(new FormatException("Invalid arena settings format. This error is not fatal.", e));
+                // This was too confusing for users
+                //Debug.LogException(new FormatException("Invalid arena settings format. This error is not fatal.", e));
                 arenaCharacters.Unset(self);
             }
         }
@@ -183,306 +176,40 @@ namespace SlugBase
             orig(self, manager);
 
             // Place relative to the first join button
-            self.pages[0].subObjects.Add(new PlayerSelector(self, self.pages[0]));
+            self.pages[0].subObjects.Add(new ArenaCharacterSelector(self, self.pages[0]));
         }
 
         #endregion Hooks
 
         // The list of name plates
-        internal class PlayerSelector : MenuObject
+        internal class ArenaCharacterSelector : MenuObject
         {
-            private static readonly Vector2 namePlateOffset = new Vector2(0f, -37f);
-            const float namePlateHeight = 30f;
-            const float buttonHeight = 22f;
-            const float buttonMargin = 1f;
-            const float buttonXOffset = 3f;
+            private static readonly Vector2 characterSelectorOffset = new Vector2(0f, -37f);
 
-            private readonly PlayerNamePlate[] namePlates;
+            private readonly CharacterSelectButton[] namePlates;
 
-            public PlayerSelector(MultiplayerMenu menu, MenuObject owner) : base(menu, owner)
+            public ArenaCharacterSelector(MultiplayerMenu menu, MenuObject owner) : base(menu, owner)
             {
-                namePlates = new PlayerNamePlate[menu.playerJoinButtons.Length];
+                if (!arenaCharacters.TryGet(menu.GetArenaSetup, out var characters))
+                    arenaCharacters[menu.GetArenaSetup] = characters = new CharacterSelectGroup();
+
+                namePlates = new CharacterSelectButton[menu.playerJoinButtons.Length];
                 for(int i = 0; i < namePlates.Length; i++)
                 {
-                    namePlates[i] = new PlayerNamePlate(menu, this, menu.playerJoinButtons[i], i);
+                    var pjb = menu.playerJoinButtons[i];
+                    namePlates[i] = new CharacterSelectButton(menu, this, pjb.pos + characterSelectorOffset, pjb.size.x, characters, i);
                     subObjects.Add(namePlates[i]);
                 }
             }
 
-            // An individual name plate made up of a box and many player labels
-            private class PlayerNamePlate : ButtonTemplate
+            public override void Update()
             {
-                public float childOffset;
-                public bool expand;
-                public readonly int playerNumber;
-                private readonly RoundedRect back;
-                private readonly RoundedRect selectRect;
-                private readonly List<PlayerLabel> labels;
-                private readonly float expandedHeight;
-                private PlayerJoinButton portrait;
-                private int SelectedLabel
+                base.Update();
+
+                var menu = (MultiplayerMenu)this.menu;
+                for(int i = 0; i < menu.playerJoinButtons.Length; i++)
                 {
-                    get
-                    {
-                        if (arenaCharacters.TryGet(menu.manager.arenaSetup, out var characters)
-                            && playerNumber >= 0f && playerNumber < characters.Count)
-                        {
-                            var cha = characters[playerNumber];
-                            return Math.Max(labels.FindIndex(l => l.player.Equals(cha)), 0);
-                        }
-                        else
-                            return 0;
-                    }
-                }
-
-                public PlayerNamePlate(Menu.Menu menu, PlayerSelector owner, PlayerJoinButton portrait, int playerNumber) : base(menu, owner, portrait.pos + namePlateOffset, new Vector2(portrait.size.x, namePlateHeight))
-                {
-                    this.portrait = portrait;
-                    this.playerNumber = playerNumber;
-
-                    back = new RoundedRect(menu, this, new Vector2(), size, true);
-                    subObjects.Add(back);
-                    selectRect = new RoundedRect(menu, this, new Vector2(), size, false);
-                    subObjects.Add(selectRect);
-
-                    labels = new List<PlayerLabel>();
-
-                    float y = 0f;
-                    int i = 0;
-
-                    // Add non-SlugBase slugcats
-                    foreach(var name in Enum.GetValues(typeof(SlugcatStats.Name)))
-                    {
-                        if (PlayerManager.GetCustomPlayer((int)name) != null) continue;
-
-                        var label = new PlayerLabel(menu, this, new PlayerDescriptor((int)name), i++);
-                        labels.Add(label);
-                        y += buttonHeight;
-                    }
-
-                    // Add SlugBase slugcats
-                    foreach (var cha in PlayerManager.GetCustomPlayers())
-                    {
-                        Color baseColor = PlayerGraphics.SlugcatColor(cha.SlugcatIndex);
-                        var label = new PlayerLabel(menu, this, new PlayerDescriptor(cha), i++);
-                        labels.Add(label);
-                        y += buttonHeight;
-                    }
-
-                    subObjects.AddRange(labels.Select(l => (MenuObject)l));
-
-                    // This sets the minimum height to cover the portrait entirely
-                    //expandedHeight = Mathf.Max(portrait.pos.y + portrait.size.y - pos.y, labels.Count * buttonHeight + namePlateHeight - buttonHeight);
-
-                    // This sets the height to fit the buttons exactly
-                    expandedHeight = labels.Count * buttonHeight + namePlateHeight - buttonHeight;
-                }
-
-                public override void Clicked()
-                {
-                    base.Clicked();
-
-                    if (!expand)
-                    {
-                        expand = true;
-                        menu.PlaySound(SoundID.MENU_Button_Standard_Button_Pressed);
-                    }
-                }
-
-                public override void Singal(MenuObject sender, string message)
-                {
-                    switch(message)
-                    {
-                        case "SELECT":
-                            expand = !expand;
-                            break;
-                        default:
-                            base.Singal(sender, message);
-                            break;
-                    }
-                }
-
-                public override void Update()
-                {
-                    // Updating the children before updaing the size of this element is important to keep them in sync
-                    // Without it, the children are delayed by a small amount
-                    Vector2 nextSize = size;
-                    nextSize.y = Custom.LerpAndTick(nextSize.y, expand ? expandedHeight : namePlateHeight, 0.1f, 10f);
-
-                    back.fillAlpha = Custom.LerpMap(nextSize.y, namePlateHeight, -namePlateOffset.y, Mathf.Lerp(0.3f, 0.6f, buttonBehav.col), 1f);
-                    if (buttonBehav.clicked)
-                    {
-                        back.addSize = new Vector2(0f, 0f);
-                        selectRect.addSize = new Vector2(0f, 0f);
-                    }
-                    else
-                    {
-                        back.addSize = new Vector2(10f, 6f) * (buttonBehav.sizeBump + 0.5f * Mathf.Sin(buttonBehav.extraSizeBump * Mathf.PI));
-                        selectRect.addSize = new Vector2(2f, -2f) * (buttonBehav.sizeBump + 0.5f * Mathf.Sin(buttonBehav.extraSizeBump * Mathf.PI));
-                    }
-
-
-                    float deltaY = nextSize.y - size.y;
-
-                    float targetOffset = (namePlateHeight - buttonHeight) / 2f - (expand ? 0f : SelectedLabel * buttonHeight);
-                    if(Mathf.Sign(deltaY) == Mathf.Sign(targetOffset - childOffset) && deltaY != 0f)
-                    {
-                        childOffset = Mathf.MoveTowards(childOffset, targetOffset, Mathf.Abs(deltaY));
-                    }
-                    else
-                    {
-                        childOffset = targetOffset;
-                    }
-
-                    base.Update();
-
-                    size = nextSize;
-                    back.size = size;
-                    selectRect.size = size;
-                    portrait.buttonBehav.greyedOut = expand || size.y > -namePlateOffset.y;
-                    buttonBehav.greyedOut = size.y > namePlateHeight;
-
-                    // Stop the selector from going offscreen
-                    pos = portrait.pos + namePlateOffset;
-                    float heightAboveScreen = pos.y + size.y - Futile.screen.height;
-                    if (heightAboveScreen > 0f)
-                        pos.y -= heightAboveScreen;
-                }
-
-                public override void GrafUpdate(float timeStacker)
-                {
-                    base.GrafUpdate(timeStacker);
-                    
-                    Color fillColor = Color.Lerp(Menu.Menu.MenuRGB(MenuColors.Black), Menu.Menu.MenuRGB(MenuColors.White), Mathf.Lerp(buttonBehav.lastFlash, buttonBehav.flash, timeStacker));
-                    for (int i = 0; i < 9; i++)
-                    {
-                        back.sprites[i].color = fillColor;
-                    }
-                    float selectAlpha = 0.5f + 0.5f * Mathf.Sin(Mathf.Lerp(buttonBehav.lastSin, buttonBehav.sin, timeStacker) / 30f * Mathf.PI * 2f);
-                    selectAlpha *= buttonBehav.sizeBump;
-
-                    for (int j = 0; j < 8; j++)
-                    {
-                        selectRect.sprites[j].color = MyColor(timeStacker);
-                        selectRect.sprites[j].alpha = selectAlpha;
-                    }
-                }
-
-                public override Color MyColor(float timeStacker)
-                {
-                    if (expand || buttonBehav.greyedOut)
-                        return Menu.Menu.MenuRGB(MenuColors.MediumGrey);
-                    else
-                        return base.MyColor(timeStacker);
-                }
-            }
-
-            // An icon and name label
-            private class PlayerLabel : ButtonTemplate
-            {
-                public readonly PlayerDescriptor player;
-                private readonly int order;
-                private readonly CreatureSymbol icon;
-                private readonly FLabel name;
-                private PlayerNamePlate Owner => (PlayerNamePlate)owner;
-
-                public PlayerLabel(Menu.Menu menu, PlayerNamePlate owner, PlayerDescriptor player, int order) : base(menu, owner, new Vector2(), new Vector2(owner.size.x, buttonHeight - buttonMargin * 2f))
-                {
-                    this.player = player;
-                    this.order = order;
-
-                    icon = new CreatureSymbol(MultiplayerUnlocks.SymbolDataForSandboxUnlock(MultiplayerUnlocks.SandboxUnlockID.Slugcat), Container);
-                    icon.Show(false);
-                    icon.lastShowFlash = 0f;
-                    icon.showFlash = 0f;
-                    icon.myColor = player.Color;
-
-                    // Remove "The" from the start of names
-                    var prettyName = player.name;
-                    if (prettyName.StartsWith("The ", StringComparison.OrdinalIgnoreCase))
-                        prettyName = prettyName.Substring(4).TrimStart();
-
-                    name = new FLabel("font", prettyName);
-                    name.anchorX = 0f;
-                    name.anchorY = 0.5f;
-                    Container.AddChild(name);
-                }
-
-                public override void RemoveSprites()
-                {
-                    base.RemoveSprites();
-
-                    icon.RemoveSprites();
-                    name.RemoveFromContainer();
-                }
-
-                public override void Update()
-                {
-                    base.Update();
-                    icon.Update();
-
-                    pos.x = buttonMargin;
-                    pos.y = buttonMargin + buttonHeight * order + Owner.childOffset;
-                    buttonBehav.greyedOut = pos.y < 0f || pos.y + size.y > Owner.size.y;
-                }
-
-                public override void Clicked()
-                {
-                    base.Clicked();
-
-                    if (!arenaCharacters.TryGet(menu.manager.arenaSetup, out var characters))
-                        arenaCharacters[menu.manager.arenaSetup] = characters = new List<PlayerDescriptor>();
-
-                    if(player.type == PlayerDescriptor.Type.SlugBase && !player.player.MultiInstance)
-                    {
-                        // For single-instance characters, replace all other selections
-                        while (characters.Count < 4)
-                            characters.Add(survivorDesc);
-                        for (int i = 0; i < characters.Count; i++)
-                            characters[i] = new PlayerDescriptor(player.player);
-                    }
-                    else
-                    {
-                        // For multi-instance characters, replace all other single-instance selections
-                        for(int i = 0; i < characters.Count; i++)
-                        {
-                            if(characters[i].type == PlayerDescriptor.Type.SlugBase && !characters[i].player.MultiInstance)
-                            {
-                                characters[i] = player;
-                            }
-                        }
-
-                        while (characters.Count <= Owner.playerNumber)
-                            characters.Add(survivorDesc);
-
-                        characters[Owner.playerNumber] = player;
-                    }
-
-                    menu.PlaySound(SoundID.MENU_Button_Successfully_Assigned);
-
-                    Singal(this, "SELECT");
-                }
-
-                public override void GrafUpdate(float timeStacker)
-                {
-                    base.GrafUpdate(timeStacker);
-
-                    var drawPos = DrawPos(timeStacker) + new Vector2(0.1f, 0.1f);
-                    var relDrawPos = Vector2.Lerp(lastPos, pos, timeStacker);
-                    var drawSize = DrawSize(timeStacker);
-
-                    var iconPos = drawPos;
-                    iconPos.x += buttonXOffset;
-                    iconPos.y += drawSize.y / 2f;
-                    iconPos.x += drawSize.y / 2f;
-                    icon.Draw(timeStacker, iconPos);
-
-                    name.SetPosition(iconPos + new Vector2(drawSize.y / 2f + 5f, 0f));
-
-                    bool visible = relDrawPos.y >= 0f && relDrawPos.y + drawSize.y <= Owner.DrawSize(timeStacker).y;
-                    icon.symbolSprite.isVisible = visible;
-                    name.isVisible = visible;
-                    name.color = Color.Lerp(Menu.Menu.MenuColor(MenuColors.MediumGrey).rgb, Color.white, Mathf.Lerp(buttonBehav.lastCol, buttonBehav.col, timeStacker));
+                    menu.playerJoinButtons[i].buttonBehav.greyedOut = namePlates[i].Expanded;
                 }
             }
         }
@@ -522,6 +249,9 @@ namespace SlugBase
             /// The SlugBase character this represents, or null if it was not added by SlugBase.
             /// </summary>
             public readonly SlugBaseCharacter player;
+
+            /// <inheritdoc cref="SlugBaseCharacter.MultiInstance"/>
+            public bool MultiInstance => type != Type.SlugBase || player.MultiInstance;
 
             /// <summary>
             /// Creates a representation of a SlugBase character.
@@ -656,6 +386,22 @@ namespace SlugBase
                     case Type.SlugBase: return otherDesc.player == player;
                 }
                 return base.Equals(obj);
+            }
+
+            /// <summary>
+            /// Tests if two <see cref="PlayerDescriptor"/>s refer to the same character.
+            /// </summary>
+            public static bool operator ==(PlayerDescriptor a, PlayerDescriptor b)
+            {
+                return a is null ? b is null : a.Equals(b);
+            }
+            
+            /// <summary>
+            /// Tests if two <see cref="PlayerDescriptor"/>s do not refer to the same character.
+            /// </summary>
+            public static bool operator !=(PlayerDescriptor a, PlayerDescriptor b)
+            {
+                return !(a == b);
             }
         }
     }
