@@ -29,6 +29,7 @@ namespace SlugBase
     {
         private static Dictionary<string, string> globalData;
         private static readonly Dictionary<string, Dictionary<string, string>> characterData = new Dictionary<string, Dictionary<string, string>>();
+        private static readonly Dictionary<SaveFileIndex, SlugBaseSaveSummary> summaryCache = new Dictionary<SaveFileIndex, SlugBaseSaveSummary>();
 
         internal static void ApplyHooks()
         {
@@ -99,6 +100,9 @@ namespace SlugBase
         // ... write to a separate file instead
         private static void PlayerProgression_SaveToDisk(On.PlayerProgression.orig_SaveToDisk orig, PlayerProgression self, bool saveCurrentState, bool saveMaps, bool saveMiscProg)
         {
+            // Clear cached save summaries, since those could now be invalid
+            summaryCache.Clear();
+
             WriteDataToDisk(self.rainWorld);
 
             if (!saveCurrentState || !(self.currentSaveState is CustomSaveState css))
@@ -461,8 +465,22 @@ namespace SlugBase
         /// <returns>A summary of the given character's save file or null if the file could not be found.</returns>
         public static SlugBaseSaveSummary GetSaveSummary(RainWorld rainWorld, string name, int slot)
         {
-            if (!MineSaveData(rainWorld, name, slot, true, out var vanilla, out var custom, out var customPersistent)) return null;
-            return new SlugBaseSaveSummary(vanilla, custom, customPersistent);
+            var key = new SaveFileIndex(name, slot);
+            if (!summaryCache.TryGetValue(key, out var summary))
+            {
+                if (!MineSaveData(rainWorld, name, slot, true, out var vanilla, out var custom, out var customPersistent))
+                {
+                    summary = null;
+                }
+                else
+                {
+                    summary = new SlugBaseSaveSummary(vanilla, custom, customPersistent);
+                }
+
+                summaryCache[key] = summary;
+            }
+
+            return summary;
         }
 
         private static bool MineSaveData(RainWorld rainWorld, string name, int slot, bool mineCustom, out SlugcatSelectMenu.SaveGameData vanilla, out Dictionary<string, string> custom, out Dictionary<string, string> customPersistent)
@@ -624,6 +642,37 @@ namespace SlugBase
                 CustomData = customData;
                 CustomPersistentData = customPersistent;
             }
+        }
+
+        private struct SaveFileIndex
+        {
+            public readonly string name;
+            public readonly int slot;
+
+            public SaveFileIndex(string name, int slot)
+            {
+                this.name = name;
+                this.slot = slot;
+            }
+
+            public override bool Equals(object obj)
+            {
+                return obj is SaveFileIndex index &&
+                       name == index.name &&
+                       slot == index.slot;
+            }
+
+            public override int GetHashCode()
+            {
+                int hashCode = -2042622137;
+                hashCode = hashCode * -1521134295 + EqualityComparer<string>.Default.GetHashCode(name);
+                hashCode = hashCode * -1521134295 + slot.GetHashCode();
+                return hashCode;
+            }
+
+            public static bool operator ==(SaveFileIndex left, SaveFileIndex right) => left.Equals(right);
+
+            public static bool operator !=(SaveFileIndex left, SaveFileIndex right) => !(left == right);
         }
     }
 }
