@@ -235,10 +235,12 @@ namespace SlugBase
             {
                 var characters = arenaCharacters[self] = CharacterSelectGroup.FromString(File.ReadAllText(arenaSettingsPath));
             }
-            catch //(Exception e)
+            catch (FileNotFoundException) { }
+            catch (System.IO.IsolatedStorage.IsolatedStorageException) { }
+            catch (Exception e)
             {
                 // This was too confusing for users
-                //Debug.LogException(new FormatException("Invalid arena settings format. This error is not fatal.", e));
+                Debug.LogException(new FormatException("Invalid arena settings format. This error is not fatal.", e));
                 arenaCharacters.Unset(self);
             }
         }

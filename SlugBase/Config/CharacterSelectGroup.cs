@@ -118,7 +118,7 @@ namespace SlugBase.Config
         {
             SetAllPlayers(new PlayerDescriptor(0));
 
-            string[] lines = s.Split(new string[] { Environment.NewLine }, StringSplitOptions.None);
+            string[] lines = s.Split(new string[] { Environment.NewLine }, StringSplitOptions.RemoveEmptyEntries);
 
             int i;
             switch (lines[0])
