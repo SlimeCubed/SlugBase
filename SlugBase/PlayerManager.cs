@@ -4,6 +4,7 @@ using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
+using Menu;
 using RWCustom;
 using UnityEngine;
 
@@ -201,6 +202,26 @@ namespace SlugBase
         }
 
         #region HOOKS
+
+        // Hide passage tokens
+        private static void SleepAndDeathScreen_GetDataFromGame(On.Menu.SleepAndDeathScreen.orig_GetDataFromGame orig, SleepAndDeathScreen self, KarmaLadderScreen.SleepDeathScreenDataPackage package)
+        {
+            orig(self, package);
+
+            if (!GetCustomPlayer(self.manager.rainWorld.progression.PlayingAsSlugcat)?.CanUsePassages(self.saveState) ?? false)
+            {
+                self.endgameTokens.pos.x -= 10000;
+            }
+        }
+
+        // Disallow usage of passages
+        private static void SleepAndDeathScreen_AddPassageButton(On.Menu.SleepAndDeathScreen.orig_AddPassageButton orig, SleepAndDeathScreen self, bool buttonBlack)
+        {
+            if (GetCustomPlayer(self.manager.rainWorld.progression.PlayingAsSlugcat)?.CanUsePassages(self.saveState) ?? true)
+            {
+                orig(self, buttonBlack);
+            }
+        }
 
         // Enable SlugBaseCharacters when their players are realized
         private static void AbstractCreature_Realize(On.AbstractCreature.orig_Realize orig, AbstractCreature self)

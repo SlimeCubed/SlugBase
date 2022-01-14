@@ -475,6 +475,16 @@ namespace SlugBase
         public int InheritWorldFromSlugcat => useSpawns;
 
         /// <summary>
+        /// Whether this character can use passages to fast-travel. Defaults to true.
+        /// </summary>
+        /// <remarks>
+        /// This value only controls whether the character can fast-travel, achievements will still be accessible regardless.
+        /// </remarks>
+        /// <param name="save">The current save state.</param>
+        /// <returns>True if the character may use passages, false otherwise.</returns>
+        public bool CanUsePassages(SaveState save) => true;
+
+        /// <summary>
         /// Describes if a character should be shown on the character select menu and whether it should be selectable.
         /// </summary>
         public enum SelectMenuAccessibility
