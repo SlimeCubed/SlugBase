@@ -558,8 +558,8 @@ namespace SlugBase
                 if (stream == null) return null;
                 try
                 {
-                        StreamReader sr = new StreamReader(stream, Encoding.UTF8);
-                        return sr.ReadToEnd();
+                    StreamReader sr = new StreamReader(stream, Encoding.UTF8);
+                    return sr.ReadToEnd();
                 } catch(Exception)
                 {
                     return null;
@@ -639,6 +639,24 @@ namespace SlugBase
                 if (!DevMode)
                     hasSlideshowCache[slideshowName] = hasSlideshow;
                 return hasSlideshow;
+            }
+        }
+
+        private readonly Dictionary<string, bool> hasPortraitCache = new Dictionary<string, bool>();
+        /// <summary>
+        /// Checks whether or not this player defines a custom arena portrait.
+        /// </summary>
+        /// <param name="playerNumber">The player number for the portrait.</param>
+        /// <param name="dead">True if thie portrait should display as dead, false otherwise.</param>
+        /// <returns>True if a portrait override exists, false if it does not.</returns>
+        public virtual bool HasArenaPortrait(int playerNumber, bool dead)
+        {
+            string key = playerNumber.ToString() + (dead ? '0' : '1');
+            if (hasPortraitCache.TryGetValue(key, out bool cached)) return cached;
+
+            using (Stream res = GetResource("Illustrations", $"MultiplayerPortrait{key}.png"))
+            {
+                return hasPortraitCache[key] = res != null;
             }
         }
 

@@ -24,6 +24,8 @@ namespace SlugBase
 
         internal static void ApplyHooks()
         {
+            On.Menu.PlayerResultBox.ctor += PlayerResultBox_ctor;
+            On.Menu.MultiplayerMenu.Update += MultiplayerMenu_Update;
             new Hook(
                 typeof(Player).GetProperty(nameof(Player.slugcatStats)).GetGetMethod(),
                 new Func<Func<Player, SlugcatStats>, Player, SlugcatStats>(Player_get_slugcatStats)
@@ -86,7 +88,96 @@ namespace SlugBase
                 return characters.GetPlayer(playerNumber);
         }
 
+        private static bool GetArenaPortrait(PlayerDescriptor ply, int playerNumber, bool dead, out string folder, out string file)
+        {
+            if(ply != null
+                && ply.type == PlayerDescriptor.Type.SlugBase
+                && ply.player.HasArenaPortrait(playerNumber, dead))
+            {
+                folder = CustomSceneManager.resourceFolderName;
+                file = $"{ply.player.Name}\\Illustrations\\MultiplayerPortrait{playerNumber}{(dead ? "0" : "1")}";
+                return true;
+            }
+            else
+            {
+                folder = null;
+                file = $"MultiplayerPortrait{playerNumber}{(dead ? "0" : "1")}";
+                return false;
+            }
+        }
+
         #region Hooks
+
+        // Override portraits when ending an arena game
+        private static void PlayerResultBox_ctor(On.Menu.PlayerResultBox.orig_ctor orig, PlayerResultBox self, Menu.Menu menu, MenuObject owner, Vector2 pos, Vector2 size, ArenaSitting.ArenaPlayer player, int index)
+        {
+            orig(self, menu, owner, pos, size, player, index);
+
+            var character = GetSelectedArenaCharacter(menu.manager.arenaSetup, player.playerNumber);
+
+            if (GetArenaPortrait(character, player.playerNumber, self.DeadPortraint, out string folder, out string file))
+            {
+                MenuIllustration portrait = new MenuIllustration(
+                    menu: menu,
+                    owner: self,
+                    folderName: folder,
+                    fileName: file,
+                    pos: new Vector2(self.size.y / 2f, self.size.y / 2f),
+                    crispPixels: true,
+                    anchorCenter: true);
+                MenuIllustration oldPortrait = self.portrait;
+
+                self.portrait = portrait;
+
+                self.RemoveSubObject(oldPortrait);
+                self.subObjects.Add(portrait);
+
+                portrait.sprite.MoveBehindOtherNode(oldPortrait.sprite);
+                oldPortrait.RemoveSprites();
+            }
+        }
+
+        // Update player portraits when arena character selections change
+        private static readonly AttachedField<PlayerJoinButton, PlayerDescriptor> joinButtonCharacter = new AttachedField<PlayerJoinButton, PlayerDescriptor>();
+        private static void MultiplayerMenu_Update(On.Menu.MultiplayerMenu.orig_Update orig, MultiplayerMenu self)
+        {
+            orig(self);
+
+            for (int i = 0; i < self.playerJoinButtons.Length; i++)
+            {
+                var joinButton = self.playerJoinButtons[i];
+                var playerDesc = GetSelectedArenaCharacter(self.GetArenaSetup, i);
+                var lastChar = joinButtonCharacter[joinButton];
+
+                if (lastChar != playerDesc)
+                {
+                    joinButtonCharacter[joinButton] = playerDesc;
+
+                    if (GetArenaPortrait(playerDesc, i, false, out string folder, out string file)
+                        || GetArenaPortrait(lastChar, i, false, out _, out _))
+                    {
+                        if (joinButton.portrait.folderName != folder || joinButton.portrait.fileName != file)
+                            ReplaceJoinButton(self, i, folder, file);
+                    }
+                }
+            }
+        }
+
+        private static void ReplaceJoinButton(MultiplayerMenu menu, int i, string folder, string fileName)
+        {
+            PlayerJoinButton pjb = menu.playerJoinButtons[i];
+
+            MenuIllustration portrait = new MenuIllustration(menu, pjb, folder, fileName, pjb.size / 2f, true, true);
+            MenuIllustration oldPortrait = pjb.portrait;
+
+            pjb.portrait = portrait;
+
+            pjb.RemoveSubObject(oldPortrait);
+            pjb.subObjects.Add(portrait);
+
+            portrait.sprite.MoveBehindOtherNode(oldPortrait.sprite);
+            oldPortrait.RemoveSprites();
+        }
 
         private static SlugcatStats Player_get_slugcatStats(Func<Player, SlugcatStats> orig, Player self)
         {
