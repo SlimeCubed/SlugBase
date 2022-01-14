@@ -121,6 +121,11 @@ namespace SlugBase
         public virtual string StartRoom => null;
 
         /// <summary>
+        /// Whether this character spawns a karma flower upon dying. Defaults to true.
+        /// </summary>
+        public virtual bool PlaceKarmaFlower => true;
+
+        /// <summary>
         /// Called once as soon as possible before a game starts.
         /// If this is being used as the world character, then this will always be called before <see cref="RainWorldGame"/>'s constructor. Otherwise, it will be called immediately before <see cref="Enable"/>.
         /// </summary>
