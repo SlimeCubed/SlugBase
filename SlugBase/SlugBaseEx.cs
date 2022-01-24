@@ -50,5 +50,31 @@ namespace SlugBase
         {
             return CustomSceneManager.customRep[illustration];
         }
+
+        /// <summary>
+        /// Gets the <see cref="CustomScene"/> associated with this scene if it was built from a <see cref="SlugBaseCharacter"/>'s resources.
+        /// </summary>
+        /// <remarks>
+        /// New elements should not be added after the scene is built.
+        /// </remarks>
+        /// <param name="scene">The scene to check.</param>
+        /// <returns>The <see cref="CustomScene"/> associated with this scene or null if it was not built from a <see cref="SlugBaseCharacter"/>'s resources.</returns>
+        public static CustomScene GetCustomScene(this MenuScene scene)
+        {
+            return CustomSceneManager.customSceneRep[scene];
+        }
+
+        /// <summary>
+        /// Gets the <see cref="CustomSlideshow"/> associated with this slideshow if it was built from a <see cref="SlugBaseCharacter"/>'s resources.
+        /// </summary>
+        /// <remarks>
+        /// New slides should not be added after the slideshow is built.
+        /// </remarks>
+        /// <param name="slideshow">The slideshow to check.</param>
+        /// <returns>The <see cref="CustomSlideshow"/> associated with this slideshow or null if it was not built from a <see cref="SlugBaseCharacter"/>'s resources.</returns>
+        public static CustomSlideshow GetCustomSlideshow(this SlideShow slideshow)
+        {
+            return CustomSceneManager.customSlideshowRep[slideshow];
+        }
     }
 }

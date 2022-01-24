@@ -4,8 +4,10 @@ using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
+using Menu;
 using RWCustom;
 using UnityEngine;
+using MonoMod.RuntimeDetour;
 
 namespace SlugBase
 {
@@ -179,6 +181,10 @@ namespace SlugBase
 
         internal static void ApplyHooks()
         {
+            new Hook(
+                typeof(Player).GetProperty(nameof(Player.PlaceKarmaFlower)).GetGetMethod(),
+                new Func<Func<Player, bool>, Player, bool>(Player_get_PlaceKarmaFlower)
+            );
             On.AbstractCreature.Realize += AbstractCreature_Realize;
             On.Room.Loaded += Room_Loaded;
             On.ProcessManager.RequestMainProcessSwitch_1 += ProcessManager_RequestMainProcessSwitch_1;
@@ -201,6 +207,32 @@ namespace SlugBase
         }
 
         #region HOOKS
+
+        // Disable karma flower placement on death
+        private static bool Player_get_PlaceKarmaFlower(Func<Player, bool> orig, Player self)
+        {
+            return orig(self) && (GetCustomPlayer(self)?.PlaceKarmaFlower ?? true);
+        }
+
+        // Hide passage tokens
+        private static void SleepAndDeathScreen_GetDataFromGame(On.Menu.SleepAndDeathScreen.orig_GetDataFromGame orig, SleepAndDeathScreen self, KarmaLadderScreen.SleepDeathScreenDataPackage package)
+        {
+            orig(self, package);
+
+            if (!GetCustomPlayer(self.manager.rainWorld.progression.PlayingAsSlugcat)?.CanUsePassages(self.saveState) ?? false)
+            {
+                self.endgameTokens.pos.x -= 10000;
+            }
+        }
+
+        // Disallow usage of passages
+        private static void SleepAndDeathScreen_AddPassageButton(On.Menu.SleepAndDeathScreen.orig_AddPassageButton orig, SleepAndDeathScreen self, bool buttonBlack)
+        {
+            if (GetCustomPlayer(self.manager.rainWorld.progression.PlayingAsSlugcat)?.CanUsePassages(self.saveState) ?? true)
+            {
+                orig(self, buttonBlack);
+            }
+        }
 
         // Enable SlugBaseCharacters when their players are realized
         private static void AbstractCreature_Realize(On.AbstractCreature.orig_Realize orig, AbstractCreature self)

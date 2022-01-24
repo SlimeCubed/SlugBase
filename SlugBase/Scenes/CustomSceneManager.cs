@@ -18,6 +18,8 @@ namespace SlugBase
         private static ResourceOverride<CustomSlideshow> slideshowOverride;
 
         internal static AttachedField<MenuIllustration, SceneImage> customRep = new AttachedField<MenuIllustration, SceneImage>();
+        internal static AttachedField<MenuScene, CustomScene> customSceneRep = new AttachedField<MenuScene, CustomScene>();
+        internal static AttachedField<SlideShow, CustomSlideshow> customSlideshowRep = new AttachedField<SlideShow, CustomSlideshow>();
 
         internal static void ApplyHooks()
         {
@@ -125,6 +127,7 @@ namespace SlugBase
                     return;
                 }
                 slideshowOverride.Load(builtSlideshow);
+                customSlideshowRep[self] = builtSlideshow;
                 List<SlideshowSlide> slides = builtSlideshow.Slides;
 
                 // Chose a destination process
@@ -262,6 +265,7 @@ namespace SlugBase
                     var owner = sceneOverride.Character;
                     var builtScene = owner.BuildScene(sceneOverride.ResourceName);
                     sceneOverride.Load(builtScene);
+                    customSceneRep[self] = builtScene;
                     if (sceneOverride.Filter != null)
                         builtScene.ApplyFilter(sceneOverride.Filter);
 

@@ -121,6 +121,11 @@ namespace SlugBase
         public virtual string StartRoom => null;
 
         /// <summary>
+        /// Whether this character spawns a karma flower upon dying. Defaults to true.
+        /// </summary>
+        public virtual bool PlaceKarmaFlower => true;
+
+        /// <summary>
         /// Called once as soon as possible before a game starts.
         /// If this is being used as the world character, then this will always be called before <see cref="RainWorldGame"/>'s constructor. Otherwise, it will be called immediately before <see cref="Enable"/>.
         /// </summary>
@@ -475,6 +480,16 @@ namespace SlugBase
         public int InheritWorldFromSlugcat => useSpawns;
 
         /// <summary>
+        /// Whether this character can use passages to fast-travel. Defaults to true.
+        /// </summary>
+        /// <remarks>
+        /// This value only controls whether the character can fast-travel, achievements will still be accessible regardless.
+        /// </remarks>
+        /// <param name="save">The current save state.</param>
+        /// <returns>True if the character may use passages, false otherwise.</returns>
+        public bool CanUsePassages(SaveState save) => true;
+
+        /// <summary>
         /// Describes if a character should be shown on the character select menu and whether it should be selectable.
         /// </summary>
         public enum SelectMenuAccessibility
@@ -543,8 +558,8 @@ namespace SlugBase
                 if (stream == null) return null;
                 try
                 {
-                        StreamReader sr = new StreamReader(stream, Encoding.UTF8);
-                        return sr.ReadToEnd();
+                    StreamReader sr = new StreamReader(stream, Encoding.UTF8);
+                    return sr.ReadToEnd();
                 } catch(Exception)
                 {
                     return null;
@@ -624,6 +639,24 @@ namespace SlugBase
                 if (!DevMode)
                     hasSlideshowCache[slideshowName] = hasSlideshow;
                 return hasSlideshow;
+            }
+        }
+
+        private readonly Dictionary<string, bool> hasPortraitCache = new Dictionary<string, bool>();
+        /// <summary>
+        /// Checks whether or not this player defines a custom arena portrait.
+        /// </summary>
+        /// <param name="playerNumber">The player number for the portrait.</param>
+        /// <param name="dead">True if thie portrait should display as dead, false otherwise.</param>
+        /// <returns>True if a portrait override exists, false if it does not.</returns>
+        public virtual bool HasArenaPortrait(int playerNumber, bool dead)
+        {
+            string key = playerNumber.ToString() + (dead ? '0' : '1');
+            if (hasPortraitCache.TryGetValue(key, out bool cached)) return cached;
+
+            using (Stream res = GetResource("Illustrations", $"MultiplayerPortrait{key}.png"))
+            {
+                return hasPortraitCache[key] = res != null;
             }
         }
 
