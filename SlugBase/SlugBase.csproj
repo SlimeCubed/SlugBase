@@ -40,6 +40,10 @@
       <HintPath>..\..\rwmodlibspublic\ConfigMachine.dll</HintPath>
       <Private>False</Private>
     </Reference>
+    <Reference Include="CustomRegions">
+      <HintPath>..\..\rwbeplibs\CustomRegions.dll</HintPath>
+      <Private>False</Private>
+    </Reference>
     <Reference Include="HOOKS-Assembly-CSharp">
       <HintPath>..\..\rwmodlibspublic\HOOKS-Assembly-CSharp.dll</HintPath>
       <Private>False</Private>

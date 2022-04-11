@@ -7,6 +7,8 @@ using UnityEngine;
 using DevInterface;
 using System.IO;
 using RWCustom;
+using CustomRegions.Mod;
+using System.Runtime.CompilerServices;
 
 namespace SlugBase
 {
@@ -19,6 +21,12 @@ namespace SlugBase
 
         public static void ApplyHooks()
         {
+            try
+            {
+                AddCRSFilter();
+            }
+            catch { }
+
             On.WorldLoader.NextActivity += WorldLoader_NextActivity;
             On.WorldLoader.FindingCreatures += WorldLoader_FindingCreatures;
             On.RoomSettings.Load += RoomSettings_Load;
@@ -29,19 +37,59 @@ namespace SlugBase
             On.RoomSettings.LoadPlacedObjects += RoomSettings_LoadPlacedObjects;
         }
 
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        private static void AddCRSFilter()
+        {
+            API.AddRegionPreprocessor(region =>
+            {
+                var rw = UnityEngine.Object.FindObjectOfType<RainWorld>();
+                
+                SlugBaseCharacter ply;
+                if (rw.processManager?.currentMainLoop is RainWorldGame rwg)
+                    ply = PlayerManager.GetCustomPlayer(rwg);
+                else
+                    ply = PlayerManager.GetCustomPlayer(rw.progression.PlayingAsSlugcat);
+
+                var lines = region.Lines;
+
+                bool readingCreatures = false;
+                for (int i = lines.Count - 1; i >= 0; i--)
+                {
+                    var line = lines[i];
+                    if(readingCreatures)
+                    {
+                        // Ignore creature lines
+                        if (line == "END CREATURES") readingCreatures = false;
+                    }
+                    else
+                    {
+                        // Filter non-creature lines at the CRS level
+                        if (line == "CREATURES") readingCreatures = true;
+
+                        if (ShouldKeepLine(ply?.Name, line, out string newLine))
+                            lines[i] = newLine;
+                        else
+                            lines.RemoveAt(i);
+                    }
+                }
+            });
+        }
+
+        private static bool ShouldKeepLine(RainWorldGame game, string line, out string newLine) => ShouldKeepLine(PlayerManager.GetCustomPlayer(game)?.Name, line, out newLine);
+
         // Check and filter a single line of a world file
-        private static bool ShouldKeepLine(RainWorldGame game, string line, out string newLine)
+        private static readonly string[] worldArgsSplit = new string[] { " : " };
+        private static bool ShouldKeepLine(string charName, string line, out string newLine)
         {
             newLine = line;
 
-            string charName = PlayerManager.GetCustomPlayer(game)?.Name;
-            var args = Regex.Split(line, " : ");
+            var args = line.Split(worldArgsSplit, StringSplitOptions.None);
 
             if (args.Length == 0)
                 return true;
 
             // Pre-tags
-            if (args[0][0] == '[')
+            if (args[0].Length > 0 && args[0][0] == '[')
             {
                 int close = args[0].IndexOf(']');
                 if(close > 0)
@@ -59,7 +107,7 @@ namespace SlugBase
             for(int i = 1; i < args.Length; i++)
             {
                 var arg = args[i];
-                if (arg[0] == '[' && arg[arg.Length - 1] == ']')
+                if (arg.Length > 0 && arg[0] == '[' && arg[arg.Length - 1] == ']')
                 {
                     var filterRes = FilterKeepsChar(args[i], charName);
                     if (filterRes.HasValue)
