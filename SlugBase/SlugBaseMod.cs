@@ -59,48 +59,37 @@ namespace SlugBase
 
         public override void OnLoad()
         {
-            try
+            // Compatibility fixes
+            Compatibility.FlatmodeFix.Apply();
+            Compatibility.HookGenFix.Apply();
+
+            // Core changes
+            CustomSceneManager.ApplyHooks();
+            MultiplayerTweaks.ApplyHooks();
+            PlayerColors.ApplyHooks();
+            PlayerManager.ApplyHooks();
+            SaveManager.ApplyHooks();
+            //SceneEditor.ApplyHooks();
+            SelectMenu.ApplyHooks();
+            ShelterScreens.ApplyHooks();
+            RegionTools.ApplyHooks();
+            WorldFixes.ApplyHooks();
+
+            // Changes that must be applied late for compatibility
+            On.RainWorld.Start += (orig, self) =>
             {
-                // Compatibility fixes
-                Compatibility.FlatmodeFix.Apply();
-                Compatibility.HookGenFix.Apply();
+                Compatibility.FancySlugcats.Apply();
+                Compatibility.JollyCoop.Apply();
+                ArenaAdditions.ApplyHooks();
+                WorldFixes.LateApply();
 
-                // Core changes
-                CustomSceneManager.ApplyHooks();
-                MultiplayerTweaks.ApplyHooks();
-                PlayerColors.ApplyHooks();
-                PlayerManager.ApplyHooks();
-                SaveManager.ApplyHooks();
-                //SceneEditor.ApplyHooks();
-                SelectMenu.ApplyHooks();
-                ShelterScreens.ApplyHooks();
-                RegionTools.ApplyHooks();
-                WorldFixes.ApplyHooks();
+                orig(self);
+            };
 
-                // Changes that must be applied late for compatibility
-                On.RainWorld.Start += (orig, self) =>
-                {
-                    Compatibility.FancySlugcats.Apply();
-                    Compatibility.JollyCoop.Apply();
-                    ArenaAdditions.ApplyHooks();
-                    WorldFixes.LateApply();
-
-                    orig(self);
-                };
-
-                // Guess an appropriate index to assign to SlugBase characters
-                // This should make them more resistant to skipping the select screen
-                foreach (SlugcatStats.Name name in Enum.GetValues(typeof(SlugcatStats.Name)))
-                    FirstCustomIndex = Math.Max((int)name + 1, FirstCustomIndex);
-            }
-            catch(Exception e)
-            {
-                On.RainWorld.Start += (orig, self) =>
-                {
-                    orig(self);
-                    Debug.LogError(e);
-                };
-            }
+            // Guess an appropriate index to assign to SlugBase characters
+            // This should make them more resistant to skipping the select screen
+            foreach (SlugcatStats.Name name in Enum.GetValues(typeof(SlugcatStats.Name)))
+                FirstCustomIndex = Math.Max((int)name + 1, FirstCustomIndex);
         }
 
         public object GetReloadState()

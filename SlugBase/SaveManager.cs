@@ -40,6 +40,7 @@ namespace SlugBase
             On.PlayerProgression.SaveDeathPersistentDataOfCurrentState += PlayerProgression_SaveDeathPersistentDataOfCurrentState;
             On.PlayerProgression.GetOrInitiateSaveState += PlayerProgression_GetOrInitiateSaveState;
             On.PlayerProgression.IsThereASavedGame += PlayerProgression_IsThereASavedGame;
+            On.Futile.OnApplicationQuit += Futile_OnApplicationQuit;
 
             Directory.CreateDirectory(GetSaveFileDirectory());
         }
@@ -243,6 +244,16 @@ namespace SlugBase
             if (ply != null)
                 return HasCustomSaveData(ply.Name, self.rainWorld.options.saveSlot);
             return orig(self, saveStateNumber);
+        }
+
+        // Save global data when quitting
+        // Without this, changes made when menuing will not save until a game is started
+        private static void Futile_OnApplicationQuit(On.Futile.orig_OnApplicationQuit orig, Futile self)
+        {
+            orig(self);
+            var rw = UnityEngine.Object.FindObjectOfType<RainWorld>();
+            if (rw != null)
+                WriteDataToDisk(rw);
         }
 
         #endregion Hooks
