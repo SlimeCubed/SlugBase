@@ -7,8 +7,6 @@ using UnityEngine;
 using DevInterface;
 using System.IO;
 using RWCustom;
-using CustomRegions.Mod;
-using System.Runtime.CompilerServices;
 
 namespace SlugBase
 {
@@ -23,7 +21,7 @@ namespace SlugBase
         {
             try
             {
-                AddCRSFilter();
+                CRSIntegration.AddCRSFilter();
             }
             catch { }
 
@@ -37,49 +35,11 @@ namespace SlugBase
             On.RoomSettings.LoadPlacedObjects += RoomSettings_LoadPlacedObjects;
         }
 
-        [MethodImpl(MethodImplOptions.NoInlining)]
-        private static void AddCRSFilter()
-        {
-            API.AddRegionPreprocessor(region =>
-            {
-                var rw = UnityEngine.Object.FindObjectOfType<RainWorld>();
-                
-                SlugBaseCharacter ply;
-                if (rw.processManager?.currentMainLoop is RainWorldGame rwg)
-                    ply = PlayerManager.GetCustomPlayer(rwg);
-                else
-                    ply = PlayerManager.GetCustomPlayer(rw.progression.PlayingAsSlugcat);
-
-                var lines = region.Lines;
-
-                bool readingCreatures = false;
-                for (int i = lines.Count - 1; i >= 0; i--)
-                {
-                    var line = lines[i];
-                    if(readingCreatures)
-                    {
-                        // Ignore creature lines
-                        if (line == "END CREATURES") readingCreatures = false;
-                    }
-                    else
-                    {
-                        // Filter non-creature lines at the CRS level
-                        if (line == "CREATURES") readingCreatures = true;
-
-                        if (ShouldKeepLine(ply?.Name, line, out string newLine))
-                            lines[i] = newLine;
-                        else
-                            lines.RemoveAt(i);
-                    }
-                }
-            });
-        }
-
-        private static bool ShouldKeepLine(RainWorldGame game, string line, out string newLine) => ShouldKeepLine(PlayerManager.GetCustomPlayer(game)?.Name, line, out newLine);
+        internal static bool ShouldKeepLine(RainWorldGame game, string line, out string newLine) => ShouldKeepLine(PlayerManager.GetCustomPlayer(game)?.Name, line, out newLine);
 
         // Check and filter a single line of a world file
         private static readonly string[] worldArgsSplit = new string[] { " : " };
-        private static bool ShouldKeepLine(string charName, string line, out string newLine)
+        internal static bool ShouldKeepLine(string charName, string line, out string newLine)
         {
             newLine = line;
 

@@ -80,6 +80,7 @@
     <Compile Include="Compatibility\HookGenFix.cs" />
     <Compile Include="Compatibility\JollyCoop.cs" />
     <Compile Include="Config\CharacterSelectGroup.cs" />
+    <Compile Include="CRSIntegration.cs" />
     <Compile Include="MultiplayerTweaks.cs" />
     <Compile Include="PlayerColors.cs" />
     <Compile Include="SlugBaseCharacter.cs" />

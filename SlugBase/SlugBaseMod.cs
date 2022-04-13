@@ -59,37 +59,48 @@ namespace SlugBase
 
         public override void OnLoad()
         {
-            // Compatibility fixes
-            Compatibility.FlatmodeFix.Apply();
-            Compatibility.HookGenFix.Apply();
-
-            // Core changes
-            CustomSceneManager.ApplyHooks();
-            MultiplayerTweaks.ApplyHooks();
-            PlayerColors.ApplyHooks();
-            PlayerManager.ApplyHooks();
-            SaveManager.ApplyHooks();
-            //SceneEditor.ApplyHooks();
-            SelectMenu.ApplyHooks();
-            ShelterScreens.ApplyHooks();
-            RegionTools.ApplyHooks();
-            WorldFixes.ApplyHooks();
-
-            // Changes that must be applied late for compatibility
-            On.RainWorld.Start += (orig, self) =>
+            try
             {
-                Compatibility.FancySlugcats.Apply();
-                Compatibility.JollyCoop.Apply();
-                ArenaAdditions.ApplyHooks();
-                WorldFixes.LateApply();
+                // Compatibility fixes
+                Compatibility.FlatmodeFix.Apply();
+                Compatibility.HookGenFix.Apply();
 
-                orig(self);
-            };
+                // Core changes
+                CustomSceneManager.ApplyHooks();
+                MultiplayerTweaks.ApplyHooks();
+                PlayerColors.ApplyHooks();
+                PlayerManager.ApplyHooks();
+                SaveManager.ApplyHooks();
+                //SceneEditor.ApplyHooks();
+                SelectMenu.ApplyHooks();
+                ShelterScreens.ApplyHooks();
+                RegionTools.ApplyHooks();
+                WorldFixes.ApplyHooks();
 
-            // Guess an appropriate index to assign to SlugBase characters
-            // This should make them more resistant to skipping the select screen
-            foreach (SlugcatStats.Name name in Enum.GetValues(typeof(SlugcatStats.Name)))
-                FirstCustomIndex = Math.Max((int)name + 1, FirstCustomIndex);
+                // Changes that must be applied late for compatibility
+                On.RainWorld.Start += (orig, self) =>
+                {
+                    Compatibility.FancySlugcats.Apply();
+                    Compatibility.JollyCoop.Apply();
+                    ArenaAdditions.ApplyHooks();
+                    WorldFixes.LateApply();
+
+                    orig(self);
+                };
+
+                // Guess an appropriate index to assign to SlugBase characters
+                // This should make them more resistant to skipping the select screen
+                foreach (SlugcatStats.Name name in Enum.GetValues(typeof(SlugcatStats.Name)))
+                    FirstCustomIndex = Math.Max((int)name + 1, FirstCustomIndex);
+            }
+            catch(Exception e)
+            {
+                On.RainWorld.Start += (orig, self) =>
+                {
+                    orig(self);
+                    Debug.LogError(e);
+                };
+            }
         }
 
         public object GetReloadState()
