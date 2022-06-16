@@ -34,12 +34,12 @@ namespace SlugBase
                 if (readingCreatures)
                 {
                     // Ignore creature lines
-                    if (line == "END CREATURES") readingCreatures = false;
+                    if (line == "CREATURES") readingCreatures = false;
                 }
                 else
                 {
                     // Filter non-creature lines at the CRS level
-                    if (line == "CREATURES") readingCreatures = true;
+                    if (line == "END CREATURES") readingCreatures = true;
 
                     if (RegionTools.ShouldKeepLine(ply?.Name, line, out string newLine))
                         lines[i] = newLine;
