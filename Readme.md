@@ -1,6 +1,8 @@
 # SlugBase
 A framework that simplifies adding new characters to Rain World.
 
+This mod targets Rain World 1.5, and will not be receiving further updates. Please use [SlugBase 2](https://github.com/SlimeCubed/SlugBaseRemix) for Rain World 1.9 and up.
+
 ## For Users
 Downloads can be found in the [Releases](https://github.com/SlimeCubed/SlugBase/releases/latest) tab.<br> Make sure to download the one called `SlugBase.dll`.
 SlugBase is a Partiality mod, so it may be applied with any mod loader that supports Partiality mods. This includes BepInEx.
